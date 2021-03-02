@@ -1,6 +1,8 @@
 import React from 'react';
+import ReactDOMServer from "react-dom/server";
 import { YMaps, Map, Clusterer, Placemark } from "react-yandex-maps";
-import { Drawer, Button, Popconfirm, Space, Polygon } from 'antd';
+import { Drawer, Button, Popconfirm, Space, Typography, Polygon } from 'antd';
+import { EnvironmentOutlined } from '@ant-design/icons';
 import 'antd/dist/antd.css';
 import POINTS from "./points.js";
 
@@ -13,100 +15,157 @@ class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      selectedPoint: null,
-      visibleSettings: false
+      ymaps: null,
+      selectedMark: null,
+      selectedMarkContent: '',
+      edit: false,
+      coords:[]
     };
   }
 
-fred = () => {
-  this.myRef1.editor
-}
+  onMapClick(event) {
+    if(this.state.selectedMark) {
+      this.state.selectedMark.options.set('draggable', false)
+    }
 
-  closeSettings = point => {
+    this.setState(state => {
+      return {selectedMark: false}
+    })
+
+    if(this.state.edit) {
+      this.setState(state => {
+        return {
+          coords: [...state.coords, {id: event.get("coords").join(), coords: event.get("coords")}],
+          edit: false
+        };
+      });
+    }
+  }
+ 
+  clickedMark(e){
+    // console.log(e.get('target').properties.getAll())
+    // console.log(e.get('target').geometry.getCoordinates())
+    // e.get('target').options.set('draggable', true);
+    // this.state.ymaps.geoObjects.remove(e.get('target'))
+  }
+
+  removeMark(e) {
     this.setState({
-      visibleSettings: false,
-    });
-  };
+      coords: this.state.coords.filter(item => item.id !== e.get('target').geometry.getCoordinates().join()) 
+    })
+  }
 
-  onPlacemarkClick = point => () => {
-    this.setState({ selectedPoint: point, visibleSettings: !this.state.visibleSettings });
-  };
+  setHintContent() {
+    if(this.state.selectedMark) {
+      this.setState({
+        selectedMarkContent:  'asdASD' 
+      })
+    }
+  }
+
+  selectMark(e) {
+    const target = e.get('target')
+
+    this.setState({
+      selectedMark: target,
+      selectedMarkContent: target.properties.getAll.hintContent
+    })
+    target.options.set('draggable', true)
+    
+  }
 
   render() {
-    const { selectedPoint, openedDescription, visibleSettings } = this.state;
+    const { coords, edit, selectedMark, ymaps } = this.state;
+    const { Title, Paragraph } = Typography;
 
     return (
-      <div className="App">
-        <YMaps query={{ lang: "ru_RU", load: "package.full" }}>
+      <div className="App" style={{height:"100vh", position: 'relative'}}>
+        <YMaps query={{ lang: "ru_RU" }}>
           <Map
-          instanceRef={(map) => {
-            if (map) {
-              this.myMap = map
-            }
-          }}
-          onLoad={ref => (this.myMap = ref)}
+            onClick={this.onMapClick.bind(this)}
+            onLoad={ymaps => this.setState({ ymaps })}
             defaultState={mapState}
-            modules={["control.ZoomControl", "Polygon", "geoObject.addon.editor"]}
             width="100%"
-            height="100vh"
+            height="100%"
           >
             <Clusterer
-              options={{
-                preset: "islands#invertedVioletClusterIcons",
-                groupByCoordinates: false,
-              }}
+              modules={["clusterer.addon.balloon"]}
             >
-              {POINTS.map((point, index) => (
+              {coords.map((coordinates) => (
                 <Placemark
-                  modules={["geoObject.addon.hint"]}
-                  instanceRef={(map) => {
-                    if (map) {
-                      this["myRef" + index] = map
-                    }
-                  }}
-                  key={index}
-                  geometry={point.coords}
-                  onClick={this.onPlacemarkClick(point)}
-                  properties={{
-                    item: index,
-                    iconContent:point.title
-                  }}
+                  key={coordinates.id}
+                  geometry={coordinates.coords}
+                  onClick={this.selectMark.bind(this)}
+                  // properties={{
+                  //   iconContent: 'Собственный значок метки',
+                  //   hintTitle: "PlaceMark 1",
+                  //   hintContent: 'Content of PlaceMark.'
+                  // }}
                   options={{
-                    preset:"islands#blueStretchyIcon",
-                    draggiable: true
+                    preset: 'islands#blueStretchyIcon'
                   }}
                 />
               ))}
             </Clusterer>
           </Map>
         </YMaps>
-        <Drawer
-          title={selectedPoint ? selectedPoint.title : null}
-          placement="right"
-          closable={true}
-          width="30%"
-          height="100%"
-          onClose={this.closeSettings}
-          visible={visibleSettings}
-          footer={
-            <div
-              style={{
-                textAlign: 'center',
-              }}
-            >
-              <Space size="large">
-                <Button type="primary" onClick={this.fred}>
-                  Переместить
-                </Button>
-                <Popconfirm title="Вы точно хотить удалить?" okText="Да" cancelText="Нет">
-                  <Button danger>Удалить</Button>
-                </Popconfirm>
-              </Space>
-            </div>
-          }
+    
+        <div 
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0, 
+            zIndex: 333,
+            padding: '30px 50px',
+            background: selectedMark ? "#fff" : 'transparent',
+            height: selectedMark ? "200px" : "80px",
+            width: "100%",
+          }}
         >
+          {selectedMark ?
+          <>
+          <Title level={4}>
+            {selectedMark.properties.getAll().hintTitle}
+          </Title>
+          <Paragraph editable={{ onChange: this.setHintContent.bind(this) }}> {this.state.selectedMarkContent}</Paragraph>
+          </> 
+          : null}
+        
+          <div 
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0, 
+              zIndex: 333,
+              height: "70px",
+              width: "100%",
+              display: 'flex', 
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {
+              selectedMark 
+              ? 
+              <>
+                <Button danger>Удалить</Button>
+                <Button>Редактировать</Button>
+              </>
+              :
+              <Button 
+                type="primary"
+                shape="round"
+                icon={<EnvironmentOutlined />}
+                disabled={edit}
+                onClick={() => this.setState({edit: true})} 
+              >
+                Создать точку
+              </Button>
+            }
 
-        </Drawer>
+          </div>
+        </div>
+
       </div>
     );
   }
