@@ -1,40 +1,70 @@
 {
-  "name": "telephones",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.10",
-    "antd": "^4.13.0",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "react-scripts": "4.0.3",
-    "react-yandex-maps": "^4.6.0",
-    "web-vitals": "^1.0.1"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  }
+   "name": "telephones",
+   "version": "0.1.0",
+   "private": true,
+   "dependencies": {
+      "@ckeditor/ckeditor5-build-classic": "^26.0.0",
+      "@ckeditor/ckeditor5-react": "^3.0.1",
+      "@testing-library/jest-dom": "^5.11.4",
+      "@testing-library/react": "^11.1.0",
+      "@testing-library/user-event": "^12.1.10",
+      "antd": "^4.13.0",
+      "immutable": "^4.0.0-rc.12",
+      "react": "^17.0.1",
+      "react-dom": "^17.0.1",
+      "react-scripts": "4.0.3",
+      "react-yandex-maps": "^4.6.0",
+      "web-vitals": "^1.0.1"
+   },
+   "devDependencies": {
+      "@testing-library/jest-dom": "^5.11.1",
+      "@testing-library/react": "^11.2.2",
+      "@testing-library/user-event": "^12.0.11",
+      "enzyme": "^3.11.0",
+      "enzyme-adapter-react-16": "^1.15.2",
+      "eslint-config-prettier": "^8.0.0",
+      "eslint-config-standard": "^16.0.2",
+      "eslint-plugin-import": "^2.20.2",
+      "eslint-plugin-jest-dom": "^3.6.5",
+      "eslint-plugin-node": "^11.1.0",
+      "eslint-plugin-prettier": "^3.1.2",
+      "eslint-plugin-promise": "^4.2.1",
+      "eslint-plugin-react": "^7.19.0",
+      "eslint-plugin-standard": "^5.0.0",
+      "eslint-plugin-testing-library": "^3.10.1",
+      "prettier": "^2.0.4",
+      "react-test-renderer": "^17.0.1",
+      "stylelint": "^13.3.0",
+      "stylelint-config-prettier": "^8.0.1",
+      "stylelint-config-standard": "^20.0.0",
+      "stylelint-prettier": "^1.1.2"
+   },
+   "scripts": {
+      "start": "react-scripts start",
+      "build": "react-scripts build",
+      "test": "react-scripts test",
+      "eject": "react-scripts eject",
+      "eslint": "eslint --ext .js,.jsx src",
+      "eslint-fix": "eslint --fix --ext .js,.jsx src",
+      "stylelint": "stylelint \"src/**/*.css\"",
+      "prettier": "prettier --write \"**/*.+(js|jsx|json|css|md)\""
+   },
+   "eslintConfig": {
+      "extends": [
+         "react-app",
+         "react-app/jest"
+      ]
+   },
+   "browserslist": {
+      "production": [
+         ">0.2%",
+         "not dead",
+         "not op_mini all"
+      ],
+      "development": [
+         "last 1 chrome version",
+         "last 1 firefox version",
+         "last 1 safari version"
+      ]
+   }
 }
