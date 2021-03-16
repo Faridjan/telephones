@@ -43,6 +43,8 @@ import * as XLSX from 'xlsx'
 
 const mapState = { center: [47.0, 67.0], zoom: 5 }
 
+const { Title, Text, Paragraph } = Typography
+
 const { confirm } = Modal
 
 class App extends React.Component {
@@ -109,25 +111,73 @@ class App extends React.Component {
 
   openNotificationRedMark() {
     notification.error({
+      key: 'updatable',
       icon: <InfoCircleOutlined style={{ color: 'red' }} />,
       message: 'В обработке!',
-      description: 'Данный населенный был отмечен как занятый.',
+      description: (
+        <>
+          <Text>Данный населенный пункт был отмечен как занятый.</Text>
+          <br />
+          <br />
+          <Popconfirm
+            placement="topRight"
+            title="Вы действительно хотити удалить?"
+            okText="Да"
+            onConfirm={this.removeMark.bind(this)}
+            cancelText="Нет"
+          >
+            <Button danger>Удалить</Button>
+          </Popconfirm>
+        </>
+      ),
     })
   }
 
   openNotificationYellowMark() {
     notification.warning({
+      key: 'updatable',
       icon: <InfoCircleOutlined style={{ color: '#d3c759' }} />,
       message: 'Пересекаются усилия!',
-      description: 'Данный населенный был отмечен как тот в котором пересекаются усилия.',
+      description: (
+        <>
+          <Text>Данный населенный пункт был отмечен как тот в котором пересекаются усилия.</Text>
+          <br />
+          <br />
+          <Popconfirm
+            placement="topRight"
+            title="Вы действительно хотити удалить?"
+            okText="Да"
+            onConfirm={this.removeMark.bind(this)}
+            cancelText="Нет"
+          >
+            <Button danger>Удалить</Button>
+          </Popconfirm>
+        </>
+      ),
     })
   }
 
   openNotificationGreenMark() {
     notification.success({
+      key: 'updatable',
       icon: <InfoCircleOutlined style={{ color: 'green' }} />,
       message: 'Пересекаются усилия!',
-      description: 'Данный населенный был отмечен как тот в котором пересекаются усилия.',
+      description: (
+        <>
+          <Text>Данный населенный пункт был отмечен как тот в котором пересекаются усилия.</Text>
+          <br />
+          <br />
+          <Popconfirm
+            placement="topRight"
+            title="Вы действительно хотити удалить?"
+            okText="Да"
+            onConfirm={this.removeMark.bind(this)}
+            cancelText="Нет"
+          >
+            <Button danger>Удалить</Button>
+          </Popconfirm>
+        </>
+      ),
     })
   }
 
@@ -277,30 +327,22 @@ class App extends React.Component {
       const target = e.get('target')
       const options = target.properties.getAll().hintOptions
 
+      this.setState({
+        selectedMark: {
+          id: target.properties.getAll().hintId,
+          name: target.properties.getAll().hintTitle,
+          options: target.properties.getAll().hintOptions,
+          content_id: target.properties.getAll().hintContentId,
+          description: target.properties.getAll().hintDescription,
+        },
+      })
+
       if (options && options.preset === 'islands#redCircleDotIcon') {
         this.openNotificationRedMark()
-        this.setState({
-          selectedMark: null,
-        })
       } else if (options && options.preset === 'islands#yellowCircleDotIcon') {
         this.openNotificationYellowMark()
-        this.setState({
-          selectedMark: null,
-        })
       } else if (options && options.preset === 'islands#greenCircleDotIcon') {
         this.openNotificationGreenMark()
-        this.setState({
-          selectedMark: null,
-        })
-      } else {
-        this.setState({
-          selectedMark: {
-            id: target.properties.getAll().hintId,
-            name: target.properties.getAll().hintTitle,
-            content_id: target.properties.getAll().hintContentId,
-            description: target.properties.getAll().hintDescription,
-          },
-        })
       }
     }
   }
@@ -518,7 +560,6 @@ class App extends React.Component {
   render() {
     const { marks, saving, creating, newMark, isTabPhonebook, content, selectedMark, edit, searchData } = this.state
 
-    const { Title, Text, Paragraph } = Typography
     const { TextArea, Search } = Input
     const { TabPane } = Tabs
 
@@ -820,7 +861,7 @@ class App extends React.Component {
           </div>
         ) : null}
         {/* Редактирование Точки */}
-        {selectedMark ? (
+        {selectedMark && selectedMark.options.preset === 'islands#blueCircleDotIcon' ? (
           <div className="createPanel" style={{ width: isTabPhonebook ? '100%' : '30%' }}>
             {isTabPhonebook ? (
               <LeftSquareOutlined
