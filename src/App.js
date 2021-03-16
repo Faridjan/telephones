@@ -2,7 +2,6 @@ import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import { YMaps, Map, Clusterer, Placemark, ZoomControl, TypeSelector } from 'react-yandex-maps'
 import {
-  Drawer,
   Button,
   Popconfirm,
   Space,
@@ -11,14 +10,21 @@ import {
   Table,
   Empty,
   Spin,
-  Menu,
-  Typography,
-  Divider,
-  List,
   Modal,
+  Menu,
+  notification,
+  Dropdown,
+  Typography,
+  List,
   message,
 } from 'antd'
-import { EnvironmentOutlined, ExclamationCircleOutlined, PlusOutlined, LeftSquareOutlined } from '@ant-design/icons'
+import {
+  EnvironmentOutlined,
+  ExclamationCircleOutlined,
+  MenuOutlined,
+  LeftSquareOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons'
 import SyntaxHighlighter from 'react-syntax-highlighter'
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 
@@ -29,10 +35,13 @@ import 'antd/dist/antd.css'
 import './App.css'
 
 import { post, get, remove } from './utils/request'
+import guide from './guide.js'
 import COULUMNS from './columns.js'
 import { Content } from 'antd/lib/layout/layout'
 
-const mapState = { center: [49.140572, 69.891314], zoom: 5 }
+import * as XLSX from 'xlsx'
+
+const mapState = { center: [47.0, 67.0], zoom: 5 }
 
 const { confirm } = Modal
 
@@ -43,13 +52,20 @@ class App extends React.Component {
       ymaps: null,
       newMark: this.stubNewMark(),
       creating: false,
+      creatingRed: false,
+      creatingYellow: false,
+      creatingGreen: false,
       selectedMark: null,
+      onpenModal: false,
+      onpenModalRed: false,
+      onpenModalYellow: false,
+      onpenModalGreen: false,
       marks: [],
-      dataTable: [],
       isTabPhonebook: false,
       saving: false,
       edit: false,
       content: {
+        content_json: '',
         content_html: '',
       },
       loading: false,
@@ -64,6 +80,7 @@ class App extends React.Component {
   stubNewMark() {
     return {
       id: null,
+      type: '',
       name: null,
       coordinates: null,
       description: null,
@@ -80,8 +97,6 @@ class App extends React.Component {
     try {
       const marksFromDB = await get('/marks/all?limit=0')
 
-      // console.log(marksFromDB.data)
-
       this.setState({
         marks: marksFromDB.data,
       })
@@ -92,6 +107,30 @@ class App extends React.Component {
     }
   }
 
+  openNotificationRedMark() {
+    notification.error({
+      icon: <InfoCircleOutlined style={{ color: 'red' }} />,
+      message: 'В обработке!',
+      description: 'Данный населенный был отмечен как занятый.',
+    })
+  }
+
+  openNotificationYellowMark() {
+    notification.warning({
+      icon: <InfoCircleOutlined style={{ color: '#d3c759' }} />,
+      message: 'Пересекаются усилия!',
+      description: 'Данный населенный был отмечен как тот в котором пересекаются усилия.',
+    })
+  }
+
+  openNotificationGreenMark() {
+    notification.success({
+      icon: <InfoCircleOutlined style={{ color: 'green' }} />,
+      message: 'Пересекаются усилия!',
+      description: 'Данный населенный был отмечен как тот в котором пересекаются усилия.',
+    })
+  }
+
   onMapClick(event) {
     this.setState({
       searchData: [],
@@ -100,22 +139,21 @@ class App extends React.Component {
     if (this.state.selectedMark && !this.state.edit) {
       this.setState({
         selectedMark: false,
+        content: {
+          content_json: '',
+          content_html: '',
+        },
       })
     }
 
-    // if (this.state.creating) {
-    //   this.showCancelConfirm()
-    // }
-
-    // this.setState((state) => {
-    //   return { selectedMark: false }
-    // })
-
+    // Простое создание
     if (this.state.creating && !this.state.newMark.id) {
       this.setState((state) => {
         const newMark = state.newMark
 
         newMark.id = event.get('coords').join('')
+        newMark.type = 'base'
+        newMark.options.preset = 'islands#blueCircleDotIcon'
         newMark.coordinates = event.get('coords')
 
         return {
@@ -123,6 +161,66 @@ class App extends React.Component {
           marks: [...state.marks, newMark],
         }
       })
+    }
+
+    // Если в обработке
+    if (this.state.creatingRed && !this.state.newMark.id) {
+      this.setState((state) => {
+        const newMark = state.newMark
+
+        newMark.id = event.get('coords').join('')
+        newMark.coordinates = event.get('coords')
+        newMark.type = 'red'
+        newMark.options.preset = 'islands#redCircleDotIcon'
+        newMark.name = event.get('coords').join('')
+        newMark.description = 'Отмеченно как занятый...'
+
+        return {
+          newMark,
+          marks: [...state.marks, newMark],
+        }
+      })
+      this.saveNewMark()
+    }
+
+    // Пересекаются усилия
+    if (this.state.creatingYellow && !this.state.newMark.id) {
+      this.setState((state) => {
+        const newMark = state.newMark
+
+        newMark.id = event.get('coords').join('')
+        newMark.coordinates = event.get('coords')
+        newMark.type = 'yellow'
+        newMark.options.preset = 'islands#yellowCircleDotIcon'
+        newMark.name = event.get('coords').join('')
+        newMark.description = 'Пересекаются усилия...'
+
+        return {
+          newMark,
+          marks: [...state.marks, newMark],
+        }
+      })
+      this.saveNewMark()
+    }
+
+    // "Попросить помощь"
+    if (this.state.creatingGreen && !this.state.newMark.id) {
+      this.setState((state) => {
+        const newMark = state.newMark
+
+        newMark.id = event.get('coords').join('')
+        newMark.coordinates = event.get('coords')
+        newMark.type = 'green'
+        newMark.options.preset = 'islands#greenCircleDotIcon'
+        newMark.name = event.get('coords').join('')
+        newMark.description = 'Попросить помощь...'
+
+        return {
+          newMark,
+          marks: [...state.marks, newMark],
+        }
+      })
+      this.saveNewMark()
     }
   }
 
@@ -177,15 +275,33 @@ class App extends React.Component {
   selectMark(e) {
     if (!this.state.creating) {
       const target = e.get('target')
+      const options = target.properties.getAll().hintOptions
 
-      this.setState({
-        selectedMark: {
-          id: target.properties.getAll().hintId,
-          name: target.properties.getAll().hintTitle,
-          content_id: target.properties.getAll().hintContentId,
-          description: target.properties.getAll().hintDescription,
-        },
-      })
+      if (options && options.preset === 'islands#redCircleDotIcon') {
+        this.openNotificationRedMark()
+        this.setState({
+          selectedMark: null,
+        })
+      } else if (options && options.preset === 'islands#yellowCircleDotIcon') {
+        this.openNotificationYellowMark()
+        this.setState({
+          selectedMark: null,
+        })
+      } else if (options && options.preset === 'islands#greenCircleDotIcon') {
+        this.openNotificationGreenMark()
+        this.setState({
+          selectedMark: null,
+        })
+      } else {
+        this.setState({
+          selectedMark: {
+            id: target.properties.getAll().hintId,
+            name: target.properties.getAll().hintTitle,
+            content_id: target.properties.getAll().hintContentId,
+            description: target.properties.getAll().hintDescription,
+          },
+        })
+      }
     }
   }
 
@@ -195,6 +311,10 @@ class App extends React.Component {
       creating: false,
       newMark: this.stubNewMark(),
       isTabPhonebook: false,
+      content: {
+        content_json: '',
+        content_html: '',
+      },
     })
   }
 
@@ -216,7 +336,9 @@ class App extends React.Component {
           name: newMark.name,
           description: newMark.description,
           coordinates: newMark.coordinates,
+          options: newMark.options,
           content_html: content.content_html,
+          content_json: JSON.stringify(content.content_json),
         })
 
         if (added) {
@@ -231,9 +353,13 @@ class App extends React.Component {
               }),
               newMark: this.stubNewMark(),
               creating: false,
+              creatingRed: false,
+              creatingYellow: false,
+              creatingGreen: false,
               saving: false,
               content: {
                 content_html: '',
+                content_json: '',
               },
             }
           })
@@ -278,9 +404,9 @@ class App extends React.Component {
     })
   }
 
-  onChangeDesc({ target: { value } }) {
+  onChangeDesc(data) {
     const newMark = this.state.newMark
-    newMark.description = value
+    newMark.description = data
 
     this.setState({
       newMark,
@@ -288,11 +414,8 @@ class App extends React.Component {
   }
 
   onDragMark(e) {
-    console.log('test')
     const newMark = this.state.newMark
     newMark.coordinates = e.get('target').geometry.getCoordinates()
-
-    console.log(newMark)
 
     this.setState({
       newMark,
@@ -335,18 +458,6 @@ class App extends React.Component {
     }
   }
 
-  handleAddRow() {
-    const { count, dataTable } = this.state
-    const newData = {
-      name: 'Farid Orazovich',
-      phone: '+7 705 443 51 32',
-      address: `London, Park Lane no.`,
-    }
-    this.setState({
-      dataTable: [...dataTable, newData],
-    })
-  }
-
   tabOnClick(tabKey) {
     this.setState({
       isTabPhonebook: tabKey === 'phonebook',
@@ -358,11 +469,80 @@ class App extends React.Component {
     }
   }
 
+  readExcel(file) {
+    const promise = new Promise((resolve, reject) => {
+      const fileReader = new FileReader()
+      fileReader.readAsArrayBuffer(file)
+
+      fileReader.onload = (e) => {
+        const bufferArray = e.target.result
+
+        const wb = XLSX.read(bufferArray, { type: 'buffer' })
+
+        const wsname = wb.SheetNames[0]
+
+        const ws = wb.Sheets[wsname]
+
+        const data = XLSX.utils.sheet_to_json(ws)
+
+        resolve(data)
+      }
+
+      fileReader.onerror = (error) => {
+        reject(error)
+      }
+    })
+
+    promise.then((d) => {
+      const { content } = this.state
+
+      content.content_json = d
+
+      this.setState({
+        content,
+      })
+    })
+  }
+
+  exportJS() {
+    const data = this.state.content.content_json
+    const fields = Object.keys(data[0])
+
+    const wb = XLSX.utils.book_new() // book
+    const ws = XLSX.utils.json_to_sheet(data, { header: fields }) // sheet
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Fred')
+    XLSX.writeFile(wb, 'Demo.xlsx')
+  }
+
   render() {
-    const { marks, saving, creating, newMark, isTabPhonebook, selectedMark, dataTable, edit, searchData } = this.state
+    const { marks, saving, creating, newMark, isTabPhonebook, content, selectedMark, edit, searchData } = this.state
+
     const { Title, Text, Paragraph } = Typography
     const { TextArea, Search } = Input
     const { TabPane } = Tabs
+
+    function createMarkup() {
+      return { __html: selectedMark.description }
+    }
+
+    const menu = (
+      <Menu>
+        <Menu.Item key="0" onClick={() => this.setState({ onpenModalGreen: true })}>
+          ПОПРОСИТЬ ПОМОЩЬ
+        </Menu.Item>
+        <Menu.Item key="1" onClick={() => this.setState({ onpenModalYellow: true })}>
+          ПЕРЕСЕКАЮТСЯ УСИЛИЯ
+        </Menu.Item>
+        <Menu.Item key="2" onClick={() => this.setState({ onpenModalRed: true })}>
+          ОТМЕТИТЬ КАК ЗАНЯТЫЙ
+        </Menu.Item>
+        <Menu.Divider />
+        <Menu.Item onClick={() => this.setState({ onpenModal: true })} key="3">
+          РУКОВОДСТВО
+        </Menu.Item>
+      </Menu>
+    )
 
     return (
       <div
@@ -373,13 +553,68 @@ class App extends React.Component {
           overflow: 'hidden',
         }}
       >
+        <Modal
+          title="ПРИМЕРЫ НАХОЖДЕНИЯ ТЕЛЕФОННЫХ НОМЕРОВ, ПРИ ОТСУТСТВИИ ТЕЛЕФОННЫХ СПРАВОЧНИКОВ"
+          width="90%"
+          height="100vh"
+          style={{
+            marginBottom: 60,
+          }}
+          visible={this.state.onpenModal}
+          onOk={() => this.setState({ onpenModal: false })}
+          onCancel={() => this.setState({ onpenModal: false })}
+        >
+          <div dangerouslySetInnerHTML={{ __html: guide }} />
+        </Modal>
+
+        <Modal
+          title="Отметить как занятый"
+          visible={this.state.onpenModalRed}
+          onOk={() => this.setState({ creatingRed: true, onpenModalRed: false })}
+          okText="Выбрать позицию"
+          onCancel={() => this.setState({ onpenModalRed: false })}
+          cancelText="Отмена"
+        >
+          <Text>
+            В выбранной позиции будет создана новая точка красного цвета. Это означает, что населенный пункт будет
+            отмечен как занятый. Не забудьте своевремeнно удалить.
+          </Text>
+        </Modal>
+
+        <Modal
+          title="Пересекаются усилия?"
+          visible={this.state.onpenModalYellow}
+          onOk={() => this.setState({ creatingYellow: true, onpenModalYellow: false })}
+          okText="Выбрать позицию"
+          onCancel={() => this.setState({ onpenModalYellow: false })}
+          cancelText="Отмена"
+        >
+          <Text>
+            В выбранной позиции будет создана новая точка желтого цвета. Это означает, что в данном населенном пункте
+            пересекаются усилия. Не забудьте своевремeнно удалить.
+          </Text>
+        </Modal>
+
+        <Modal
+          title="Попросить помощь"
+          visible={this.state.onpenModalGreen}
+          onOk={() => this.setState({ creatingGreen: true, onpenModalGreen: false })}
+          okText="Выбрать позицию"
+          onCancel={() => this.setState({ onpenModalGreen: false })}
+          cancelText="Отмена"
+        >
+          <Text>
+            В выбранной позиции будет создана новая точка зеленного цвета. Это означает, что в данном населенном пункте
+            <i> нужна помощь в поиске телефонных номеров</i>.
+          </Text>
+        </Modal>
+
         <YMaps query={{ lang: 'ru_RU' }}>
           <Map
             onClick={this.onMapClick.bind(this)}
             onLoad={(ymaps) => this.setState({ ymaps })}
             defaultState={mapState}
             width="100%"
-            // height="100%"
             style={{ height: 'calc(100% + 30px)' }}
           >
             <TypeSelector />
@@ -394,6 +629,7 @@ class App extends React.Component {
                   properties={{
                     iconContent: mark.name,
                     hintTitle: mark.name,
+                    hintOptions: mark.options,
                     hintContent: mark.name,
                     hintDescription: mark.description,
                     hintId: mark.id,
@@ -402,7 +638,7 @@ class App extends React.Component {
                     // balloonContent: 'Заглушка для балуна',
                   }}
                   options={{
-                    preset: 'islands#blueDotIcon',
+                    preset: mark.options ? mark.options.preset : 'islands#blueCircleDotIcon',
                     // cursor: 'arrow',
                     draggable: mark.id === newMark.id,
                   }}
@@ -411,7 +647,29 @@ class App extends React.Component {
             </Clusterer>
           </Map>
         </YMaps>
-
+        <div
+          style={{
+            position: 'absolute',
+            left: 30,
+            top: 10,
+            zIndex: 44,
+            width: 100,
+          }}
+        >
+          <Dropdown overlay={menu} trigger={['click']}>
+            <MenuOutlined
+              style={{
+                fontSize: 25,
+                fontWeight: 800,
+                color: '#fff',
+                background: '#1890ff',
+                padding: 5,
+                borderRadius: 3,
+              }}
+              onClick={(e) => e.preventDefault()}
+            />
+          </Dropdown>
+        </div>
         <div
           style={{
             position: 'absolute',
@@ -428,9 +686,7 @@ class App extends React.Component {
             allowClear={true}
             onChange={this.onSearch.bind(this)}
             enterButton
-            // enterButton={<Button style={{ background: ' rgb(250, 162, 0)' }}>Отмена</Button>}
           />
-          {/* <Divider orientation="left">Результаты поиска</Divider> */}
           {searchData.length >= 1 ? (
             <List
               style={{ background: '#fff' }}
@@ -450,17 +706,16 @@ class App extends React.Component {
             />
           ) : null}
         </div>
-
-        {newMark.coordinates ? (
+        {newMark.coordinates && newMark.type === 'base' ? (
           <div className="createPanel" style={{ width: isTabPhonebook ? '100%' : '30%' }}>
-            <div style={{ height: '100%' }}>
+            <div>
               {isTabPhonebook ? (
                 <LeftSquareOutlined
                   onClick={() => this.setState({ isTabPhonebook: false })}
                   style={{
                     position: 'absolute',
                     fontSize: 30,
-                    color: '#1890ff',
+                    color: 'rgb(24, 144, 255)',
                     right: 20,
                     top: 20,
                     cursor: 'pointer',
@@ -479,7 +734,15 @@ class App extends React.Component {
                 />
                 <br />
                 <br />
-                <TextArea placeholder="Описание метки" allowClear onChange={this.onChangeDesc.bind(this)} />
+                <CKEditor
+                  editor={ClassicEditor}
+                  config={{ toolbar: [] }}
+                  onChange={(event, editor) => {
+                    const data = editor.getData()
+                    this.onChangeDesc(data)
+                  }}
+                  height="200px"
+                />
               </div>
 
               <Tabs onTabClick={this.tabOnClick.bind(this)}>
@@ -491,32 +754,30 @@ class App extends React.Component {
                     centered
                     tabBarStyle={{ background: '#fefefe', padding: '0 15px', display: 'inline-block', borderRadius: 5 }}
                   >
-                    <TabPane key="menuHTML" tab="HTML">
-                      <TextArea
-                        placeholder="Вставте HTML"
-                        onChange={this.createContentHtml.bind(this)}
-                        allowClear
-                        rows={10}
-                      />
-                      {/* <CKEditor editor={ClassicEditor} data="<h2>Редактируйте HTML!</h2>" height="200px" /> */}
-                    </TabPane>
                     <TabPane key="menuTable" tab="Таблица">
+                      <input
+                        type="file"
+                        onChange={(e) => {
+                          const file = e.target.files[0]
+                          this.readExcel(file)
+                        }}
+                      />
+                      <br />
+                      <br />
                       <Table
+                        style={{
+                          marginBottom: 80,
+                        }}
                         columns={COULUMNS}
-                        dataSource={dataTable}
+                        rowKey="__rowNum__"
+                        dataSource={content.content_json}
                         locale={{
                           emptyText: (
                             <Empty description="Справочник отсутствуeт" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                           ),
                         }}
                         rowClassName={() => 'editable-row'}
-                        bordered
-                      />
-                      <Button
-                        onClick={this.handleAddRow.bind(this)}
-                        icon={<PlusOutlined />}
-                        shape="round"
-                        type="primary"
+                        pagination={false}
                       />
                     </TabPane>
                     <TabPane key="menuIMG" tab="Изображение">
@@ -532,6 +793,11 @@ class App extends React.Component {
 
             <div
               style={{
+                // position: 'fixed',
+                // right: 0,
+                // bottom: 0,
+                // height: 40,
+                // padding: 40,
                 display: 'flex',
                 justifyContent: 'flex-end',
               }}
@@ -553,14 +819,28 @@ class App extends React.Component {
             </div>
           </div>
         ) : null}
-
+        {/* Редактирование Точки */}
         {selectedMark ? (
           <div className="createPanel" style={{ width: isTabPhonebook ? '100%' : '30%' }}>
+            {isTabPhonebook ? (
+              <LeftSquareOutlined
+                onClick={() => this.setState({ isTabPhonebook: false })}
+                style={{
+                  position: 'absolute',
+                  fontSize: 30,
+                  color: 'rgb(24, 144, 255)',
+                  right: 20,
+                  top: 20,
+                  cursor: 'pointer',
+                }}
+              />
+            ) : null}
+
             <div>
               <Title level={3} style={{ textAlign: 'center' }} editable={edit}>
                 {selectedMark.name}
               </Title>
-              <Paragraph editable={edit}>{selectedMark.description}</Paragraph>
+              <div dangerouslySetInnerHTML={createMarkup()} />
               <div>
                 <Tabs onTabClick={this.tabOnClick.bind(this)}>
                   <TabPane tab="Метка" key="markOptions">
@@ -576,7 +856,14 @@ class App extends React.Component {
                         borderRadius: 5,
                       }}
                     >
-                      <TabPane key="menuHTML" tab="HTML">
+                      <TabPane key="menuTable" tab="Таблица">
+                        {this.state.content.content_json ? (
+                          <>
+                            <Button onClick={this.exportJS.bind(this)}>Скачать в EXCEL</Button>
+                            <br />
+                            <br />
+                          </>
+                        ) : null}
                         <div
                           style={{
                             display: this.state.loading ? 'flex' : 'none',
@@ -586,45 +873,17 @@ class App extends React.Component {
                         >
                           <Spin />
                         </div>
-                        <TextArea
-                          disabled={!edit}
-                          placeholder="Вставте HTML"
-                          allowClear
-                          rows={10}
-                          value={this.state.content.content_html ? this.state.content.content_html : ''}
-                        />
-                        <SyntaxHighlighter language="html" height="100px" style={docco} highlighter={'prism'}>
-                          {this.state.content.content_html ? this.state.content.content_html : ''}
-                        </SyntaxHighlighter>
-                        {/* <CKEditor
-                          disabled={!edit}
-                          editor={ClassicEditor}
-                          // data={this.state.content.content_html}
-                          data={'<p></p>'}
-                          onReady={(editor) => {
-                            // You can store the "editor" and use when it is needed.
-                            editor.setDat(this.state.content.content_html)
-                          }}
-                          height="200px"
-                        /> */}
-                      </TabPane>
-                      <TabPane key="menuTable" tab="Таблица">
                         <Table
                           columns={COULUMNS}
-                          dataSource={dataTable}
+                          dataSource={content.content_json}
                           locale={{
                             emptyText: (
                               <Empty description="Справочник отсутствуeт" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                             ),
                           }}
                           rowClassName={() => 'editable-row'}
+                          pagination={false}
                           bordered
-                        />
-                        <Button
-                          onClick={this.handleAddRow.bind(this)}
-                          icon={<PlusOutlined />}
-                          shape="round"
-                          type="primary"
                         />
                       </TabPane>
                       <TabPane key="menuIMG" tab="Изображение">
@@ -645,22 +904,32 @@ class App extends React.Component {
                 justifyContent: 'flex-end',
               }}
             >
-              <Space size={20}>
-                <Popconfirm
-                  placement="topRight"
-                  title="Вы действительно хотити удалить?"
-                  okText="Да"
-                  onConfirm={this.removeMark.bind(this)}
-                  cancelText="Нет"
-                >
-                  <Button danger>Удалить</Button>
-                </Popconfirm>
+              {!edit ? (
                 <Button onClick={() => this.setState({ edit: true })}>Редактировать</Button>
-              </Space>
+              ) : (
+                <Space size={20}>
+                  <Button type="dashed" onClick={() => this.setState({ edit: false })}>
+                    Отмена
+                  </Button>
+                  <div>
+                    <Button type="primary" onClick={() => this.setState({ edit: false })}>
+                      Сохранить
+                    </Button>
+                    <Popconfirm
+                      placement="topRight"
+                      title="Вы действительно хотити удалить?"
+                      okText="Да"
+                      onConfirm={this.removeMark.bind(this)}
+                      cancelText="Нет"
+                    >
+                      <Button danger>Удалить</Button>
+                    </Popconfirm>
+                  </div>
+                </Space>
+              )}
             </div>
           </div>
         ) : null}
-
         <Button
           type="primary"
           style={{

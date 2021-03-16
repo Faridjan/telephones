@@ -48,3 +48,8 @@
   display: block;
   z-index: 3;
 }
+
+.ant-table-tbody > tr > td {
+  height: 5px;
+  padding: 4px;
+}
