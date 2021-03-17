@@ -137,10 +137,10 @@ class App extends React.Component {
     notification.warning({
       key: 'updatable',
       icon: <InfoCircleOutlined style={{ color: '#d3c759' }} />,
-      message: 'Пересекаются усилия!',
+      message: 'Нужна помощь.',
       description: (
         <>
-          <Text>Данный населенный пункт был отмечен как тот в котором пересекаются усилия.</Text>
+          <Text>Данный населенный пункт был отмечен как тот в котором нужна помощь в поиске телефоных номеров.</Text>
           <br />
           <br />
           <Popconfirm
