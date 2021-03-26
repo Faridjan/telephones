@@ -113,15 +113,20 @@ class App extends React.Component {
     notification.error({
       key: 'updatable',
       icon: <InfoCircleOutlined style={{ color: 'red' }} />,
-      message: 'В обработке!',
+      message: 'Обрабатывается!',
       description: (
         <>
-          <Text>Данный населенный пункт был отмечен как занятый.</Text>
+          {this.state.selectedMark ? (
+            <strong>
+              <div dangerouslySetInnerHTML={{ __html: this.state.selectedMark.description }} />
+            </strong>
+          ) : null}
+          <Text>Данный населенный пункт был отмечен как находящийся в обработке.</Text>
           <br />
           <br />
           <Popconfirm
             placement="topRight"
-            title="Вы действительно хотити удалить?"
+            title="Подтверждаете удаление?"
             okText="Да"
             onConfirm={this.removeMark.bind(this)}
             cancelText="Нет"
@@ -140,12 +145,19 @@ class App extends React.Component {
       message: 'Пересекаются усилия!',
       description: (
         <>
-          <Text>Данный населенный пункт был отмечен как тот в котором пересекаются усилия.</Text>
+          {this.state.selectedMark ? (
+            <strong>
+              <div dangerouslySetInnerHTML={{ __html: this.state.selectedMark.description }} />
+            </strong>
+          ) : null}
+          <Text>
+            Данный населенный пункт был отмечен как тот в котором пересекаются усилия и это вызывает проблемы.
+          </Text>
           <br />
           <br />
           <Popconfirm
             placement="topRight"
-            title="Вы действительно хотити удалить?"
+            title="Подтверждаете удаление?"
             okText="Да"
             onConfirm={this.removeMark.bind(this)}
             cancelText="Нет"
@@ -161,15 +173,23 @@ class App extends React.Component {
     notification.success({
       key: 'updatable',
       icon: <InfoCircleOutlined style={{ color: 'green' }} />,
-      message: 'Нужна помощь.',
+      message: 'Нужна помощь!',
       description: (
         <>
-          <Text>Данный населенный пункт был отмечен как тот в котором нужна помощь в поиске телефоных номеров.</Text>
+          {this.state.selectedMark ? (
+            <strong>
+              <div dangerouslySetInnerHTML={{ __html: this.state.selectedMark.description }} />
+            </strong>
+          ) : null}
+          <Text>
+            В этом населенном пункте требуется помошь в поиске телефоных номеров. Для помощи можно воспользоватся одним
+            из методов описаных в руководстве.
+          </Text>
           <br />
           <br />
           <Popconfirm
             placement="topRight"
-            title="Вы действительно хотити удалить?"
+            title="Подтверждаете удаление?"
             okText="Да"
             onConfirm={this.removeMark.bind(this)}
             cancelText="Нет"
@@ -198,12 +218,18 @@ class App extends React.Component {
 
     // Простое создание
     if (this.state.creating && !this.state.newMark.id) {
+      const newMarkType = this.state.newMark.type
+      const colorMark =
+        newMarkType === 'red' ? 'red' : newMarkType === 'yellow' ? 'yellow' : newMarkType === 'green' ? 'green' : 'blue'
+
+      const colorMarkType = 'islands#' + colorMark + 'CircleDotIcon'
+
       this.setState((state) => {
         const newMark = state.newMark
 
         newMark.id = event.get('coords').join('')
-        newMark.type = 'base'
-        newMark.options.preset = 'islands#blueCircleDotIcon'
+        newMark.type = newMarkType || 'base'
+        newMark.options.preset = colorMarkType
         newMark.coordinates = event.get('coords')
 
         return {
@@ -211,66 +237,6 @@ class App extends React.Component {
           marks: [...state.marks, newMark],
         }
       })
-    }
-
-    // Если в обработке
-    if (this.state.creatingRed && !this.state.newMark.id) {
-      this.setState((state) => {
-        const newMark = state.newMark
-
-        newMark.id = event.get('coords').join('')
-        newMark.coordinates = event.get('coords')
-        newMark.type = 'red'
-        newMark.options.preset = 'islands#redCircleDotIcon'
-        newMark.name = event.get('coords').join('')
-        newMark.description = 'Отмеченно как занятый...'
-
-        return {
-          newMark,
-          marks: [...state.marks, newMark],
-        }
-      })
-      this.saveNewMark()
-    }
-
-    // Пересекаются усилия
-    if (this.state.creatingYellow && !this.state.newMark.id) {
-      this.setState((state) => {
-        const newMark = state.newMark
-
-        newMark.id = event.get('coords').join('')
-        newMark.coordinates = event.get('coords')
-        newMark.type = 'yellow'
-        newMark.options.preset = 'islands#yellowCircleDotIcon'
-        newMark.name = event.get('coords').join('')
-        newMark.description = 'Пересекаются усилия...'
-
-        return {
-          newMark,
-          marks: [...state.marks, newMark],
-        }
-      })
-      this.saveNewMark()
-    }
-
-    // "Попросить помощь"
-    if (this.state.creatingGreen && !this.state.newMark.id) {
-      this.setState((state) => {
-        const newMark = state.newMark
-
-        newMark.id = event.get('coords').join('')
-        newMark.coordinates = event.get('coords')
-        newMark.type = 'green'
-        newMark.options.preset = 'islands#greenCircleDotIcon'
-        newMark.name = event.get('coords').join('')
-        newMark.description = 'Попросить помощь...'
-
-        return {
-          newMark,
-          marks: [...state.marks, newMark],
-        }
-      })
-      this.saveNewMark()
     }
   }
 
@@ -569,18 +535,27 @@ class App extends React.Component {
 
     const menu = (
       <Menu>
-        <Menu.Item key="0" onClick={() => this.setState({ onpenModalGreen: true })}>
-          ПОПРОСИТЬ ПОМОЩЬ
+        <Menu.Item key="0" onClick={() => this.setState({ creating: true })}>
+          Установить справочник
         </Menu.Item>
-        <Menu.Item key="1" onClick={() => this.setState({ onpenModalYellow: true })}>
-          ПЕРЕСЕКАЮТСЯ УСИЛИЯ
+        <Menu.Item key="1" onClick={() => this.setState({ onpenModalGreen: true })}>
+          Попросить помошь
         </Menu.Item>
-        <Menu.Item key="2" onClick={() => this.setState({ onpenModalRed: true })}>
-          ОТМЕТИТЬ КАК ЗАНЯТЫЙ
+        <Menu.Item key="2" onClick={() => this.setState({ onpenModalYellow: true })}>
+          Пересекаются усилия
+        </Menu.Item>
+        <Menu.Item key="3" onClick={() => this.setState({ onpenModalRed: true })}>
+          Отметить как занятый
         </Menu.Item>
         <Menu.Divider />
-        <Menu.Item onClick={() => this.setState({ onpenModal: true })} key="3">
-          РУКОВОДСТВО
+        <Menu.Item onClick={() => this.setState({ onpenModal: true })} key="4">
+          Телефонные коды
+        </Menu.Item>
+        <Menu.Item onClick={() => this.setState({ onpenModal: true })} key="5">
+          Руководство
+        </Menu.Item>
+        <Menu.Item onClick={() => this.setState({ onpenModal: true })} key="6">
+          Инструкция
         </Menu.Item>
       </Menu>
     )
@@ -595,7 +570,7 @@ class App extends React.Component {
         }}
       >
         <Modal
-          title="ПРИМЕРЫ НАХОЖДЕНИЯ ТЕЛЕФОННЫХ НОМЕРОВ, ПРИ ОТСУТСТВИИ ТЕЛЕФОННЫХ СПРАВОЧНИКОВ"
+          title="Примеры нахождения телефонных номеров, при отсутствии телефонных справочников"
           width="90%"
           height="100vh"
           style={{
@@ -603,6 +578,8 @@ class App extends React.Component {
           }}
           visible={this.state.onpenModal}
           onOk={() => this.setState({ onpenModal: false })}
+          okText="Скачать заготовку таблицы"
+          cancelText="Закрыть"
           onCancel={() => this.setState({ onpenModal: false })}
         >
           <div dangerouslySetInnerHTML={{ __html: guide }} />
@@ -611,42 +588,81 @@ class App extends React.Component {
         <Modal
           title="Отметить как занятый"
           visible={this.state.onpenModalRed}
-          onOk={() => this.setState({ creatingRed: true, onpenModalRed: false })}
+          onOk={() =>
+            this.setState({ creating: true, newMark: { ...this.state.newMark, type: 'red' }, onpenModalRed: false })
+          }
           okText="Выбрать позицию"
           onCancel={() => this.setState({ onpenModalRed: false })}
           cancelText="Отмена"
         >
           <Text>
-            В выбранной позиции будет создана новая точка красного цвета. Это означает, что населенный пункт будет
-            отмечен как занятый. Не забудьте своевремeнно удалить.
+            В выбранной позиции будет создана новая точка красного цвета. Это будет означать что данный населенный пункт
+            обрабатывается. Не забудьте своевремeнно удалить.
           </Text>
         </Modal>
 
         <Modal
-          title="Пересекаются усилия?"
+          title="То что хотелось бы сделать"
+          visible={this.state.onpenModalweb}
+          onOk={() => this.setState({ creatingweb: true, onpenModalweb: false })}
+          okText="OK"
+          onCancel={() => this.setState({ onpenModalweb: false })}
+          cancelText="Отмена"
+        >
+          <Text>
+            1 Добавить сколько пользователей подключено в данный момент к сайту.<br></br> 2 Убрать обобщающие кружки с
+            цифрами оставить только цветные точки.<br></br> 3 Убрать вывод координат на цветных точках заменив на
+            сообщение о значении точки.(выводить сообщение прямо на месте рядос с точкой<br></br> 4 Добавить чат с
+            возможностью очистки сообщений (очистка обязательна) <br></br>5 добавить телефонные коды Казахстана.(в меню
+            опция уже есть)<br></br> 6 сделать две карты СПРАВОЧНИКИ и ТЕРЕТОРИЯ (переключение одной кнопкой).<br></br>{' '}
+            7 Перенести на платный хостинг установить пароль.<br></br> 8 Заменить карту на Google.<br></br> 9 Сделать
+            номера более читаемыми Заменить 31275 на 3-12-75<br></br>
+            10 заменить руку на стрелку (при наведении рука с указательным пальцем)<br></br> 11 На зеленой метке в
+            информационном окне к кнопке Удалить добавить кнопку Номера найдены и при нажатии выполняется переход к
+            установить справочник и зеленая метка автоматически меняется на синюю<br></br> 12 Добавить Инструкцию по
+            пользованию сайтом в меню опция уже есть (будет также в html).<br></br> 13 В Руководстве исправить таблицу
+            (непрозвоненые сотни окрасились в серый цвет сделать прозрачными) убрать нижнии кнопки отмена и ок и
+            заменить их на одну кнопку скачать заготовку таблицы.<br></br> 14 При нажатии на значок лупы при пустом поле
+            выходит ошибка, происходит зависание страницы(даже не при пустом кажется тоже выйдет ошибка) и поле поиска
+            не очищается после выбора справочника (если с большой буквы тоже не находит)<br></br> 15 При установке
+            красной метки добавить поле ввода кто именно ее установил.<br></br> 16 Убрать из слоев опцию Панорамы
+            <br></br>
+          </Text>
+        </Modal>
+
+        <Modal
+          title="Пересекаются усилия"
           visible={this.state.onpenModalYellow}
-          onOk={() => this.setState({ creatingYellow: true, onpenModalYellow: false })}
+          onOk={() =>
+            this.setState({
+              creating: true,
+              newMark: { ...this.state.newMark, type: 'yellow' },
+              onpenModalYellow: false,
+            })
+          }
           okText="Выбрать позицию"
           onCancel={() => this.setState({ onpenModalYellow: false })}
           cancelText="Отмена"
         >
           <Text>
-            В выбранной позиции будет создана новая точка желтого цвета. Это означает, что в данном населенном пункте
-            пересекаются усилия. Не забудьте своевремeнно удалить.
+            В выбранной позиции будет создана новая точка желтого цвета. Это будет означать что именно в этом населенном
+            пункте пересекаются усилия и это вызывает проблемы.
           </Text>
         </Modal>
 
         <Modal
           title="Попросить помощь"
           visible={this.state.onpenModalGreen}
-          onOk={() => this.setState({ creatingGreen: true, onpenModalGreen: false })}
+          onOk={() =>
+            this.setState({ creating: true, newMark: { ...this.state.newMark, type: 'green' }, onpenModalGreen: false })
+          }
           okText="Выбрать позицию"
           onCancel={() => this.setState({ onpenModalGreen: false })}
           cancelText="Отмена"
         >
           <Text>
-            В выбранной позиции будет создана новая точка зеленного цвета. Это означает, что в данном населенном пункте
-            <i> нужна помощь в поиске телефонных номеров</i>.
+            В выбранной позиции будет создана новая точка зеленного цвета. Это будет означать что в данном населенном
+            пункте требуется помощь в поиске телефонных номеров.
           </Text>
         </Modal>
 
@@ -659,33 +675,31 @@ class App extends React.Component {
             style={{ height: 'calc(100% + 30px)' }}
           >
             <TypeSelector />
-            <Clusterer modules={['clusterer.addon.balloon']}>
-              {marks.map((mark) => (
-                <Placemark
-                  key={mark.id}
-                  modules={['geoObject.addon.hint', 'geoObject.addon.balloon']}
-                  geometry={mark.coordinates}
-                  onDragEnd={this.onDragMark.bind(this)}
-                  onClick={this.selectMark.bind(this)}
-                  properties={{
-                    iconContent: mark.name,
-                    hintTitle: mark.name,
-                    hintOptions: mark.options,
-                    hintContent: mark.name,
-                    hintDescription: mark.description,
-                    hintId: mark.id,
-                    hintContentId: mark.content_id,
-                    // iconCaption: mark.name,
-                    // balloonContent: 'Заглушка для балуна',
-                  }}
-                  options={{
-                    preset: mark.options ? mark.options.preset : 'islands#blueCircleDotIcon',
-                    // cursor: 'arrow',
-                    draggable: mark.id === newMark.id,
-                  }}
-                />
-              ))}
-            </Clusterer>
+            {marks.map((mark) => (
+              <Placemark
+                key={mark.id}
+                modules={['geoObject.addon.hint', 'geoObject.addon.balloon']}
+                geometry={mark.coordinates}
+                onDragEnd={this.onDragMark.bind(this)}
+                onClick={this.selectMark.bind(this)}
+                properties={{
+                  iconContent: mark.name,
+                  hintTitle: mark.name,
+                  hintOptions: mark.options,
+                  hintContent: mark.name,
+                  hintDescription: mark.description,
+                  hintId: mark.id,
+                  hintContentId: mark.content_id,
+                  // iconCaption: mark.name,
+                  // balloonContent: 'Заглушка для балуна',
+                }}
+                options={{
+                  preset: mark.options ? mark.options.preset : 'islands#blueCircleDotIcon',
+                  // cursor: 'arrow',
+                  draggable: mark.id === newMark.id,
+                }}
+              />
+            ))}
           </Map>
         </YMaps>
         <div
@@ -700,12 +714,15 @@ class App extends React.Component {
           <Dropdown overlay={menu} trigger={['click']}>
             <MenuOutlined
               style={{
-                fontSize: 25,
+                fontSize: 20,
+                position: 'absolute',
+                left: '10%',
+                bottom: -30,
                 fontWeight: 800,
                 color: '#fff',
                 background: '#1890ff',
-                padding: 5,
-                borderRadius: 3,
+                padding: 6,
+                borderRadius: 1,
               }}
               onClick={(e) => e.preventDefault()}
             />
@@ -714,20 +731,22 @@ class App extends React.Component {
         <div
           style={{
             position: 'absolute',
-            right: '120px',
+            right: '115px',
+            left: '81%',
+
             color: 'green',
-            top: 10,
+            top: 8,
             zIndex: 4,
-            width: 350,
+            width: 150,
           }}
         >
           <Search
-            placeholder="Поиск справочников"
+            placeholder="Найти"
             onSearch={this.onSearch.bind(this)}
             allowClear={true}
             onChange={this.onSearch.bind(this)}
-            enterButton
           />
+
           {searchData.length >= 1 ? (
             <List
               style={{ background: '#fff' }}
@@ -747,7 +766,7 @@ class App extends React.Component {
             />
           ) : null}
         </div>
-        {newMark.coordinates && newMark.type === 'base' ? (
+        {newMark.coordinates ? (
           <div className="createPanel" style={{ width: isTabPhonebook ? '100%' : '30%' }}>
             <div>
               {isTabPhonebook ? (
@@ -764,7 +783,9 @@ class App extends React.Component {
                 />
               ) : null}
 
-              <Title level={3}>Создание справочника</Title>
+              <Title level={3}>
+                {this.state.newMark.type === 'base' ? 'Создание справочника' : 'Введите описание'}
+              </Title>
 
               <div style={{ display: isTabPhonebook ? 'none' : 'block' }}>
                 <Input
@@ -786,50 +807,57 @@ class App extends React.Component {
                 />
               </div>
 
-              <Tabs onTabClick={this.tabOnClick.bind(this)}>
-                <TabPane tab="Метка" key="markOptions">
-                  Настройки метки
-                </TabPane>
-                <TabPane tab="Справочник" key="phonebook" centered>
-                  <Tabs
-                    centered
-                    tabBarStyle={{ background: '#fefefe', padding: '0 15px', display: 'inline-block', borderRadius: 5 }}
-                  >
-                    <TabPane key="menuTable" tab="Таблица">
-                      <input
-                        type="file"
-                        onChange={(e) => {
-                          const file = e.target.files[0]
-                          this.readExcel(file)
-                        }}
-                      />
-                      <br />
-                      <br />
-                      <Table
-                        style={{
-                          marginBottom: 80,
-                        }}
-                        columns={COULUMNS}
-                        rowKey="__rowNum__"
-                        dataSource={content.content_json}
-                        locale={{
-                          emptyText: (
-                            <Empty description="Справочник отсутствуeт" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                          ),
-                        }}
-                        rowClassName={() => 'editable-row'}
-                        pagination={false}
-                      />
-                    </TabPane>
-                    <TabPane key="menuIMG" tab="Изображение">
-                      Изображение
-                    </TabPane>
-                    <TabPane key="menuFile" tab="Файл">
-                      Файл
-                    </TabPane>
-                  </Tabs>
-                </TabPane>
-              </Tabs>
+              {newMark.type === 'base' ? (
+                <Tabs onTabClick={this.tabOnClick.bind(this)}>
+                  <TabPane tab="Метка" key="markOptions">
+                    Настройки метки
+                  </TabPane>
+                  <TabPane tab="Справочник" key="phonebook" centered>
+                    <Tabs
+                      centered
+                      tabBarStyle={{
+                        background: '#fefefe',
+                        padding: '0 15px',
+                        display: 'inline-block',
+                        borderRadius: 5,
+                      }}
+                    >
+                      <TabPane key="menuTable" tab="Таблица">
+                        <input
+                          type="file"
+                          onChange={(e) => {
+                            const file = e.target.files[0]
+                            this.readExcel(file)
+                          }}
+                        />
+                        <br />
+                        <br />
+                        <Table
+                          style={{
+                            marginBottom: 80,
+                          }}
+                          columns={COULUMNS}
+                          rowKey="__rowNum__"
+                          dataSource={content.content_json}
+                          locale={{
+                            emptyText: (
+                              <Empty description="Справочник отсутствуeт" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                            ),
+                          }}
+                          rowClassName={() => 'editable-row'}
+                          pagination={false}
+                        />
+                      </TabPane>
+                      <TabPane key="menuIMG" tab="Изображение">
+                        Изображение
+                      </TabPane>
+                      <TabPane key="menuFile" tab="Файл">
+                        Файл
+                      </TabPane>
+                    </Tabs>
+                  </TabPane>
+                </Tabs>
+              ) : null}
             </div>
 
             <div
@@ -846,7 +874,7 @@ class App extends React.Component {
               <Space size={20}>
                 <Popconfirm
                   placement="topRight"
-                  title="Вы действительно хотити отменить изменения?"
+                  title="Отменить изменения?"
                   okText="Да"
                   onConfirm={this.cancelCreate.bind(this)}
                   cancelText="Нет"
@@ -958,7 +986,7 @@ class App extends React.Component {
                     </Button>
                     <Popconfirm
                       placement="topRight"
-                      title="Вы действительно хотити удалить?"
+                      title="Подтверждаете удаление?"
                       okText="Да"
                       onConfirm={this.removeMark.bind(this)}
                       cancelText="Нет"
@@ -975,16 +1003,33 @@ class App extends React.Component {
           type="primary"
           style={{
             position: 'absolute',
-            left: '50%',
-            bottom: 15,
+            top: 8,
+            left: '10%',
+            bottom: 583,
+            borderRadius: 1,
             transform: 'translate(-50%, 0)',
           }}
           shape="round"
-          icon={<EnvironmentOutlined />}
           disabled={creating}
-          onClick={() => this.setState({ creating: true })}
+          onClick={() => this.setState({ onpenModal: true })}
         >
-          Создать точку
+          Теретория
+        </Button>
+        <Button
+          type="primary"
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: '18.8%',
+            bottom: 583,
+            borderRadius: 1,
+            transform: 'translate(-50%, 0)',
+          }}
+          shape="round"
+          disabled={creating}
+          onClick={() => this.setState({ onpenModalweb: true })}
+        >
+          Доработать
         </Button>
       </div>
     )
