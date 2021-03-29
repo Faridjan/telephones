@@ -131,7 +131,7 @@ class App extends React.Component {
             onConfirm={this.removeMark.bind(this)}
             cancelText="Нет"
           >
-            <Button danger>Удалить</Button>
+            <Button danger>Удалить точку</Button>
           </Popconfirm>
         </>
       ),
@@ -162,7 +162,7 @@ class App extends React.Component {
             onConfirm={this.removeMark.bind(this)}
             cancelText="Нет"
           >
-            <Button danger>Удалить</Button>
+            <Button danger>Удалить точку</Button>
           </Popconfirm>
         </>
       ),
@@ -194,7 +194,42 @@ class App extends React.Component {
             onConfirm={this.removeMark.bind(this)}
             cancelText="Нет"
           >
-            <Button danger>Удалить</Button>
+            <Button danger>Удалить точку</Button>
+          </Popconfirm>
+          <Button type="default" style={{ position: 'absolute' }} onClick={() => this.setState({ creating: true })}>
+            Справочник найден
+          </Button>
+        </>
+      ),
+    })
+  }
+
+  openNotificationblackMark() {
+    notification.error({
+      key: 'updatable',
+      icon: <InfoCircleOutlined style={{ color: 'black' }} />,
+      message: 'Правило набора',
+      description: (
+        <>
+          {this.state.selectedMark ? (
+            <strong>
+              <div dangerouslySetInnerHTML={{ __html: this.state.selectedMark.name }} />
+            </strong>
+          ) : null}
+          <Text>
+            Метки черного цвета содержат название населенного пункта, название района, и правило набора номера абонента,
+            где последние XXXXX - это пятизначный номер абонента. Без надобности не удаляйте! Только для коректировки.
+          </Text>
+          <br />
+          <br />
+          <Popconfirm
+            placement="topRight"
+            title="Все равно удалить?"
+            okText="Да"
+            onConfirm={this.removeMark.bind(this)}
+            cancelText="Нет"
+          >
+            <Button danger>Удалить точку</Button>
           </Popconfirm>
         </>
       ),
@@ -216,11 +251,19 @@ class App extends React.Component {
       })
     }
 
-    // Простое создание
+    // Установка цветной точки по нажатию на карте
     if (this.state.creating && !this.state.newMark.id) {
       const newMarkType = this.state.newMark.type
       const colorMark =
-        newMarkType === 'red' ? 'red' : newMarkType === 'yellow' ? 'yellow' : newMarkType === 'green' ? 'green' : 'blue'
+        newMarkType === 'black'
+          ? 'black'
+          : newMarkType === 'red'
+          ? 'red'
+          : newMarkType === 'yellow'
+          ? 'yellow'
+          : newMarkType === 'green'
+          ? 'green'
+          : 'blue'
 
       const colorMarkType = 'islands#' + colorMark + 'CircleDotIcon'
 
@@ -309,6 +352,8 @@ class App extends React.Component {
         this.openNotificationYellowMark()
       } else if (options && options.preset === 'islands#greenCircleDotIcon') {
         this.openNotificationGreenMark()
+      } else if (options && options.preset === 'islands#blackCircleDotIcon') {
+        this.openNotificationblackMark()
       }
     }
   }
@@ -332,7 +377,7 @@ class App extends React.Component {
     })
 
     if (!this.state.newMark.name) {
-      message.error('Название метки не заполнено')
+      message.error('Укажите название населенного пункта')
       this.inputNameRef.current.focus()
     } else {
       const { newMark, content } = this.state
@@ -364,6 +409,7 @@ class App extends React.Component {
               creatingRed: false,
               creatingYellow: false,
               creatingGreen: false,
+              creatingblack: false,
               saving: false,
               content: {
                 content_html: '',
@@ -394,7 +440,7 @@ class App extends React.Component {
 
   showCancelConfirm() {
     confirm({
-      title: 'Вы действительно хотити отменить изменения?',
+      title: 'Отменить изменения?',
       icon: <ExclamationCircleOutlined />,
       okText: 'Да',
       okType: 'danger',
@@ -536,30 +582,67 @@ class App extends React.Component {
     const menu = (
       <Menu>
         <Menu.Item key="0" onClick={() => this.setState({ creating: true })}>
-          Установить справочник
+          Добавить справочник
         </Menu.Item>
-        <Menu.Item key="1" onClick={() => this.setState({ onpenModalGreen: true })}>
+        <Menu.Item
+          key="1"
+          onClick={() => this.setState({ creating: true, newMark: { ...this.state.newMark, type: 'green' } })}
+        >
           Попросить помошь
         </Menu.Item>
-        <Menu.Item key="2" onClick={() => this.setState({ onpenModalYellow: true })}>
+        <Menu.Item
+          key="2"
+          onClick={() => this.setState({ creating: true, newMark: { ...this.state.newMark, type: 'yellow' } })}
+        >
           Пересекаются усилия
         </Menu.Item>
-        <Menu.Item key="3" onClick={() => this.setState({ onpenModalRed: true })}>
+        <Menu.Item
+          key="3"
+          onClick={() => this.setState({ creating: true, newMark: { ...this.state.newMark, type: 'red' } })}
+        >
           Отметить как занятый
         </Menu.Item>
+
+        <Menu.Item
+          key="4"
+          onClick={() => this.setState({ creating: true, newMark: { ...this.state.newMark, type: 'black' } })}
+        >
+          Добавить телеф. код
+        </Menu.Item>
         <Menu.Divider />
-        <Menu.Item onClick={() => this.setState({ onpenModal: true })} key="4">
-          Телефонные коды
+        <Menu.Item onClick={() => this.setState({ onpenModalguide: true })} key="5">
+          Нет справочника
         </Menu.Item>
-        <Menu.Item onClick={() => this.setState({ onpenModal: true })} key="5">
-          Руководство
-        </Menu.Item>
-        <Menu.Item onClick={() => this.setState({ onpenModal: true })} key="6">
+        <Menu.Item onClick={() => this.setState({ onpenModalhelp: true })} key="6">
           Инструкция
         </Menu.Item>
       </Menu>
     )
 
+    const menu1 = (
+      <Menu>
+        <Menu.Item key="7">
+          <input type="checkbox" />
+          Показать карту актуальных справочников
+        </Menu.Item>
+        <Menu.Item key="8">
+          <input type="checkbox" />
+          Показать нас. пункты где нужна помошь
+        </Menu.Item>
+        <Menu.Item key="9">
+          <input type="checkbox" />
+          Показать нас. пункты где пересекаются усилия
+        </Menu.Item>
+        <Menu.Item key="10">
+          <input type="checkbox" />
+          Показать нас. пункты находящиеся в обработке
+        </Menu.Item>
+        <Menu.Item key="11">
+          <input type="checkbox" />
+          Показать правила набора телефонных кодов
+        </Menu.Item>
+      </Menu>
+    )
     return (
       <div
         className="App"
@@ -572,37 +655,96 @@ class App extends React.Component {
         <Modal
           title="Примеры нахождения телефонных номеров, при отсутствии телефонных справочников"
           width="90%"
-          height="100vh"
+          height="630vh"
           style={{
             marginBottom: 60,
           }}
-          visible={this.state.onpenModal}
-          onOk={() => this.setState({ onpenModal: false })}
+          visible={this.state.onpenModalguide}
+          onOk={() => this.setState({ onpenModalguide: false })}
           okText="Скачать заготовку таблицы"
           cancelText="Закрыть"
-          onCancel={() => this.setState({ onpenModal: false })}
+          onCancel={() => this.setState({ onpenModalguide: false })}
         >
           <div dangerouslySetInnerHTML={{ __html: guide }} />
         </Modal>
 
         <Modal
-          title="Отметить как занятый"
-          visible={this.state.onpenModalRed}
-          onOk={() =>
-            this.setState({ creating: true, newMark: { ...this.state.newMark, type: 'red' }, onpenModalRed: false })
-          }
-          okText="Выбрать позицию"
-          onCancel={() => this.setState({ onpenModalRed: false })}
-          cancelText="Отмена"
+          title="Инструкция по использованию"
+          width="90%"
+          height="120vh"
+          style={{
+            marginBottom: 60,
+          }}
+          visible={this.state.onpenModalhelp}
+          onOk={() => this.setState({ onpenModalhelp: false })}
+          okText="OK"
+          cancelText="Закрыть"
+          onCancel={() => this.setState({ onpenModalhelp: false })}
         >
           <Text>
-            В выбранной позиции будет создана новая точка красного цвета. Это будет означать что данный населенный пункт
-            обрабатывается. Не забудьте своевремeнно удалить.
+            Сайт находится в процессе доработки и улучшения и содержит некоторые ошибки, которые можно устранить
+            обновлением страницы<br></br>
+            <br></br> ПРИ ДОБАВЛЕНИИ ЛЮБОЙ ИНФОРМАЦИИ ПРИДЕРЖИВАЙТЕСЬ ТОГО ПОДХОДА КОТОРЫЙ УЖЕ ПРИМЕНЯЕТСЯ ЧТОБЫ БЫЛ
+            ПОРЯДОК!!! ДЛЯ ЭТОГО МОЖНО ПОСМОТРЕТЬ КАК ИМЕННО ЗАПОЛНЕНЫ РАЗЛИЧНЫЕ ПОЛЯ. НАПРИМЕР: ПРИ ДОБАВЛЕНИИ
+            ДИАПАЗОНОВ НОМЕРОВ МОЖНО ПРИДЕРЖИВАТСЯ ТАКОГО ПОДХОДА<br></br>
+            <br></br> Телефонный код 871636<br></br> с 9-41-00 до 9-41-99<br></br> с 9-42-00 до 9-42-99<br></br> с
+            9-43-00 до 9-43-99<br></br> с 9-44-00 до 9-44-99<br></br> с 9-45-00 до 9-45-99
+            <br></br> с 9-46-00 до 9-46-99<br></br> с 9-47-00 до 9-47-99<br></br>
+            для перевода курсора на новую строку удерживайте клавишу SHIFT и затем ENTER(ввод) это позволит избежать
+            разрыва между строками<br></br>
+            <br></br>ПРИ УСТАНОВКЕ КРАСНОЙ ЗЕЛЕНОЙ И ЖЕЛТОЙ МЕТКИ ВНАЧАЛЕ ЗАПОЛНИТЕ ПОЛЕ НАЗВАНИЕ ПОСЕЛКА ВО ВТОРОМ ПОЛЕ
+            УКАЖИТЕ КТО ЕЕ ПОСТАВИЛ НАПРИМЕР:<br></br>
+            Жесказган, Русское<br></br>
+            <br></br>ПРИ УСТАНОВКЕ ТЕЛЕФОННОГО КОДА ОБЯЗАТЕЛЬНО УКАЖИТЕ НАЗВАНИЕ ПОСЕЛКА РАЙОН К КОТОРОМУ ОН ПРИНАДЛЕЖИТ
+            И САМ КОД ДОБАВИВ В КОНЦЕ XXXXX НАПРИМЕР:<br></br> Форт-Шевченко (Тупкараганский р-н) 8 72938 ХХХХХ
+            <br></br>
+            <br></br>
+            Точки на карте имеют следующие значения:<br></br>
+            Синяя: актуальный справочник <br></br>
+            Зеленая: в этом населенном пункте требуется помошь в поиске телефонных номеров<br></br>
+            Желтая: в этом населенном пункте пересекаются усилия разных собраний<br></br>
+            Красная: этот населенный пункт в данный момент обрабатывается<br></br>Описание опций меню:<br></br>
+            Черная: правило набора телефонного номера в данном населенном пункте<br></br>
+            {/* ДОБАВИТЬ СПРАВОЧНИК:<br></br>
+              <i>
+                Этот пункт предназначен для добавления нового справочника на карту, после нажатия на Добавить справочник
+                выберите населенный пункт к которому относится справочник нажмите левой кнопкой мыши на карте: в
+                выбраной позиции будет установлена синяя точка и затем в открывшемся окне введите название населенного
+                пункта, его описание и добавьте необходимую инфформацию.<br></br> Если информация содержит только
+                телефонный код и диапазоны номеров ее можно добавить прямо в описание, если информация представлена в
+                виде ексель таблицы нажмите на слово справочник и загрузите таблицу
+                <br></br>
+              </i>
+              ПОПРОСИТЬ ПОМОШЬ
+              <br></br>
+              <i>
+                Этот пункт предназначен для того чтобы все участники могли увидеть что в отмеченном населенном пункте
+                нужна помошь в поиске телефонных номеров, после нажатия на Попросить помощь выберите населенный пункт на
+                карте нажмите на нем левой кнопкой мыши: в выбраной позиции будет установлена зеленая точка, и затем в
+                открывщемся окне введите название населенного пункта, его описание и добавьте необходимую инфформацию.
+              </i>
+              <br></br> ПЕРЕСЕКАЮТСЯ УСИЛИЯ<br></br>
+              <i>
+                Этот пункт предназначен для того чтобы все участники могли увидеть что в отмеченном населенном пункте
+                пересекаются усилия разных собраний и это вызывает проблемы, после нажатия на Пересекаются усилия
+                выберите населенный пункт на карте нажмите на нем левой кнопкой мыши: в выбраной позиции будет
+                установлена желтая точка, и затем в открывщемся окне введите название населенного пункта, его описание и
+                добавьте необходимую инфформацию.
+              </i>
+              <br></br>
+              ОТМЕТИТЬ КАК ЗАНЯТЫЙ<br></br>
+              <i>
+                Этот пункт предназначен для того чтобы все участники могли увидеть что в отмеченном населенном пункте
+                ведется обработка, после нажатия на Отметить как занятый выберите населенный пункт на карте нажмите на
+                нем левой кнопкой мыши: в выбраной позиции будет установлена красная точка, и затем в открывщемся окне
+                введите название населенного пункта, его описание и добавьте необходимую инфформацию.
+              </i>
+            </b> */}
           </Text>
         </Modal>
-
         <Modal
           title="То что хотелось бы сделать"
+          width="90%"
           visible={this.state.onpenModalweb}
           onOk={() => this.setState({ creatingweb: true, onpenModalweb: false })}
           okText="OK"
@@ -610,62 +752,31 @@ class App extends React.Component {
           cancelText="Отмена"
         >
           <Text>
-            1 Добавить сколько пользователей подключено в данный момент к сайту.<br></br> 2 Убрать обобщающие кружки с
-            цифрами оставить только цветные точки.<br></br> 3 Убрать вывод координат на цветных точках заменив на
-            сообщение о значении точки.(выводить сообщение прямо на месте рядос с точкой<br></br> 4 Добавить чат с
-            возможностью очистки сообщений (очистка обязательна) <br></br>5 добавить телефонные коды Казахстана.(в меню
-            опция уже есть)<br></br> 6 сделать две карты СПРАВОЧНИКИ и ТЕРЕТОРИЯ (переключение одной кнопкой).<br></br>{' '}
-            7 Перенести на платный хостинг установить пароль.<br></br> 8 Заменить карту на Google.<br></br> 9 Сделать
-            номера более читаемыми Заменить 31275 на 3-12-75<br></br>
-            10 заменить руку на стрелку (при наведении рука с указательным пальцем)<br></br> 11 На зеленой метке в
-            информационном окне к кнопке Удалить добавить кнопку Номера найдены и при нажатии выполняется переход к
-            установить справочник и зеленая метка автоматически меняется на синюю<br></br> 12 Добавить Инструкцию по
-            пользованию сайтом в меню опция уже есть (будет также в html).<br></br> 13 В Руководстве исправить таблицу
-            (непрозвоненые сотни окрасились в серый цвет сделать прозрачными) убрать нижнии кнопки отмена и ок и
-            заменить их на одну кнопку скачать заготовку таблицы.<br></br> 14 При нажатии на значок лупы при пустом поле
-            выходит ошибка, происходит зависание страницы(даже не при пустом кажется тоже выйдет ошибка) и поле поиска
-            не очищается после выбора справочника (если с большой буквы тоже не находит)<br></br> 15 При установке
-            красной метки добавить поле ввода кто именно ее установил.<br></br> 16 Убрать из слоев опцию Панорамы
+            САМОЕ ВАЖНОЕ
+            <br></br> 1 Добавить меню фильтра меток. Ссылка на фильтрацию меток
+            https://yandex.ru/dev/maps/jsbox/2.1/object_manager_filter <br></br> 2 Заменить карту на Google или 2 GIS.
+            <br></br>3 при установке любой метки при выборе места на карте привязать к указателю мыши ВЫБРАТЬ ПОЗИЦИЮ
+            <br></br>3 Перенести на платный хостинг установить пароль.<br></br>
+            <br></br>ВТОРОСТЕПЕННОЕ<br></br> 1 при наведении на красную желтую и зеленую метку показывать не только ее
+            название но и кто ее установил
+            <br></br> 2 Сделать номера более читаемыми Заменить 31275 на 3-12-75<br></br> 3 В руководстве исправить
+            таблицу (непрозвоненые сотни окрасились в серый цвет сделать прозрачными) и к кнопке скачать заготовку
+            таблицы подвязать скачивание пустой заготовки
+            <br></br>4 Убрать из слоев опции Спутник и Панорамы
+            <br></br>5 в цветных метках при переходе к окну добавить во второе поле Введите описание и не сохранять
+            метку пока описание не заполнено с выводом предупреждения. и под полем информационная надпись отдельно для
+            каждого цвета<br></br>6 Закрывать инф окно при нажатии на карту<br></br>7 добавить второй поиск по карте
             <br></br>
+            <br></br>ОШИБКИ<br></br> 1 При нажатии в поиске на значок лупы при пустом поле выходит ошибка, происходит
+            зависание страницы(даже не при пустом кажется тоже выйдет ошибка) и поле поиска не очищается после выбора
+            справочника (если с большой буквы поиск перестает работать) частые ошибки при нажатии крестика в поиске
+            происходит зависание страницы<br></br>2 Название метки Златополье не отправляется, златополье с маленькой
+            буквы отправляется, Федоровка не отправляется Федоровка.(с точкой отправляется)<br></br> 3 При переходе на
+            пустой справочник кнопки ОК и ОТМЕНА двигаются вместе со страницей, зафиксировать кнопки.
+            <br></br>4 В инф окнах немного отодвинуть кнопки Редактировать и Справочник найден от кнопки Удалить
+            <br></br>Возле тараза 2 метки и одна посередине карты не удаляется при нажатии происходит падение сайта
           </Text>
         </Modal>
-
-        <Modal
-          title="Пересекаются усилия"
-          visible={this.state.onpenModalYellow}
-          onOk={() =>
-            this.setState({
-              creating: true,
-              newMark: { ...this.state.newMark, type: 'yellow' },
-              onpenModalYellow: false,
-            })
-          }
-          okText="Выбрать позицию"
-          onCancel={() => this.setState({ onpenModalYellow: false })}
-          cancelText="Отмена"
-        >
-          <Text>
-            В выбранной позиции будет создана новая точка желтого цвета. Это будет означать что именно в этом населенном
-            пункте пересекаются усилия и это вызывает проблемы.
-          </Text>
-        </Modal>
-
-        <Modal
-          title="Попросить помощь"
-          visible={this.state.onpenModalGreen}
-          onOk={() =>
-            this.setState({ creating: true, newMark: { ...this.state.newMark, type: 'green' }, onpenModalGreen: false })
-          }
-          okText="Выбрать позицию"
-          onCancel={() => this.setState({ onpenModalGreen: false })}
-          cancelText="Отмена"
-        >
-          <Text>
-            В выбранной позиции будет создана новая точка зеленного цвета. Это будет означать что в данном населенном
-            пункте требуется помощь в поиске телефонных номеров.
-          </Text>
-        </Modal>
-
         <YMaps query={{ lang: 'ru_RU' }}>
           <Map
             onClick={this.onMapClick.bind(this)}
@@ -690,12 +801,14 @@ class App extends React.Component {
                   hintDescription: mark.description,
                   hintId: mark.id,
                   hintContentId: mark.content_id,
-                  // iconCaption: mark.name,
-                  // balloonContent: 'Заглушка для балуна',
+                  // iconCaption: mark.description,
+                  // balloonContent: mark.description,
                 }}
                 options={{
                   preset: mark.options ? mark.options.preset : 'islands#blueCircleDotIcon',
-                  // cursor: 'arrow',
+
+                  // cursor: 'pointer',
+                  // visible: 'false',
                   draggable: mark.id === newMark.id,
                 }}
               />
@@ -719,8 +832,24 @@ class App extends React.Component {
                 left: '10%',
                 bottom: -30,
                 fontWeight: 800,
-                color: '#fff',
-                background: '#1890ff',
+                color: '#000',
+                background: '#0ff',
+                padding: 6,
+                borderRadius: 1,
+              }}
+              onClick={(e) => e.preventDefault()}
+            />
+          </Dropdown>
+          <Dropdown overlay={menu1} trigger={['click']}>
+            <MenuOutlined
+              style={{
+                fontSize: 20,
+                position: 'absolute',
+                left: '60%',
+                bottom: -30,
+                fontWeight: 800,
+                color: '#000',
+                background: '#f0f',
                 padding: 6,
                 borderRadius: 1,
               }}
@@ -732,16 +861,15 @@ class App extends React.Component {
           style={{
             position: 'absolute',
             right: '115px',
-            left: '81%',
-
+            left: '74%',
             color: 'green',
             top: 8,
             zIndex: 4,
-            width: 150,
+            width: 250,
           }}
         >
           <Search
-            placeholder="Найти"
+            placeholder="Найти из того что есть"
             onSearch={this.onSearch.bind(this)}
             allowClear={true}
             onChange={this.onSearch.bind(this)}
@@ -783,13 +911,11 @@ class App extends React.Component {
                 />
               ) : null}
 
-              <Title level={3}>
-                {this.state.newMark.type === 'base' ? 'Создание справочника' : 'Введите описание'}
-              </Title>
+              <Title level={3}>{this.state.newMark.type === 'base' ? 'Добавление справочника' : 'Описание'}</Title>
 
               <div style={{ display: isTabPhonebook ? 'none' : 'block' }}>
                 <Input
-                  placeholder="Название метки"
+                  placeholder="Введите название поселка"
                   ref={this.inputNameRef}
                   allowClear
                   onChange={this.onChangeTitle.bind(this)}
@@ -849,10 +975,7 @@ class App extends React.Component {
                         />
                       </TabPane>
                       <TabPane key="menuIMG" tab="Изображение">
-                        Изображение
-                      </TabPane>
-                      <TabPane key="menuFile" tab="Файл">
-                        Файл
+                        Фотография
                       </TabPane>
                     </Tabs>
                   </TabPane>
@@ -1000,11 +1123,11 @@ class App extends React.Component {
           </div>
         ) : null}
         <Button
-          type="primary"
+          type="default"
           style={{
             position: 'absolute',
             top: 8,
-            left: '10%',
+            left: '68.5%',
             bottom: 583,
             borderRadius: 1,
             transform: 'translate(-50%, 0)',
@@ -1013,15 +1136,15 @@ class App extends React.Component {
           disabled={creating}
           onClick={() => this.setState({ onpenModal: true })}
         >
-          Теретория
+          Найти на карте
         </Button>
         <Button
-          type="primary"
+          type="default"
           style={{
             position: 'absolute',
-            top: 8,
-            left: '18.8%',
-            bottom: 583,
+
+            left: '6%',
+            bottom: 10,
             borderRadius: 1,
             transform: 'translate(-50%, 0)',
           }}
