@@ -13,9 +13,9 @@ export default [
     key: 'tel',
     render: (text) => <b>{text}</b>,
   },
-  {
-    title: 'Имя',
-    dataIndex: 'name',
-    key: 'name',
-  },
+  // {
+  //   title: 'Имя',
+  //   dataIndex: 'name',
+  //   key: 'name',
+  // },
 ]

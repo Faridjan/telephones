@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOMServer from 'react-dom/server'
-import { YMaps, Map, Clusterer, Placemark, ZoomControl, TypeSelector } from 'react-yandex-maps'
+import { YMaps, Map, Clusterer, Placemark, ZoomControl, SearchControl, TypeSelector } from 'react-yandex-maps'
 import {
   Button,
   Popconfirm,
@@ -57,11 +57,15 @@ class App extends React.Component {
       creatingRed: false,
       creatingYellow: false,
       creatingGreen: false,
+      creatingblack: false,
+      creatingviolet: false,
       selectedMark: null,
       onpenModal: false,
       onpenModalRed: false,
       onpenModalYellow: false,
       onpenModalGreen: false,
+      onpenModalblack: false,
+      onpenModalviolet: false,
       marks: [],
       isTabPhonebook: false,
       saving: false,
@@ -121,7 +125,10 @@ class App extends React.Component {
               <div dangerouslySetInnerHTML={{ __html: this.state.selectedMark.description }} />
             </strong>
           ) : null}
-          <Text>Данный населенный пункт был отмечен как находящийся в обработке.</Text>
+          <Text>
+            Данный населенный пункт был отмечен как находящийся в обработке.<br></br> Удаляйте только то что поставили
+            именно вы!
+          </Text>
           <br />
           <br />
           <Popconfirm
@@ -151,7 +158,9 @@ class App extends React.Component {
             </strong>
           ) : null}
           <Text>
-            Данный населенный пункт был отмечен как тот в котором пересекаются усилия и это вызывает проблемы.
+            Данный населенный пункт был отмечен как тот в котором пересекаются усилия и это вызывает проблемы.<br></br>
+            Также желтая метка может использоваться как информационная.<br></br> Удаляйте только то что поставили именно
+            вы!
           </Text>
           <br />
           <br />
@@ -182,8 +191,8 @@ class App extends React.Component {
             </strong>
           ) : null}
           <Text>
-            В этом населенном пункте требуется помошь в поиске телефоных номеров. Для помощи можно воспользоватся одним
-            из методов описаных в руководстве.
+            В этом населенном пункте требуется помошь в поиске телефоных номеров.<br></br>Если у вас есть возможность
+            помочь, можете это сделать.
           </Text>
           <br />
           <br />
@@ -204,10 +213,10 @@ class App extends React.Component {
     })
   }
 
-  openNotificationblackMark() {
+  openNotificationvioletMark() {
     notification.error({
       key: 'updatable',
-      icon: <InfoCircleOutlined style={{ color: 'black' }} />,
+      icon: <InfoCircleOutlined style={{ color: 'violet' }} />,
       message: 'Правило набора',
       description: (
         <>
@@ -217,8 +226,41 @@ class App extends React.Component {
             </strong>
           ) : null}
           <Text>
-            Метки черного цвета содержат название населенного пункта, название района, и правило набора номера абонента,
-            где последние XXXXX - это пятизначный номер абонента. Без надобности не удаляйте! Только для коректировки.
+            Метки фиолетового цвета содержат название населенного пункта, название района, и правило набора номера
+            абонента, где последние XXXXX - это пятизначный номер абонента.<br></br> Без надобности не удаляйте! Только
+            для коректировки.
+          </Text>
+          <br />
+          <br />
+          <Popconfirm
+            placement="topRight"
+            title="Все равно удалить?"
+            okText="Да"
+            onConfirm={this.removeMark.bind(this)}
+            cancelText="Нет"
+          >
+            <Button danger>Удалить точку</Button>
+          </Popconfirm>
+        </>
+      ),
+    })
+  }
+
+  openNotificationblackMark() {
+    notification.error({
+      key: 'updatable',
+      icon: <InfoCircleOutlined style={{ color: 'black' }} />,
+      message: 'Ликвидированный',
+      description: (
+        <>
+          {this.state.selectedMark ? (
+            <strong>
+              <div dangerouslySetInnerHTML={{ __html: this.state.selectedMark.description }} />
+            </strong>
+          ) : null}
+          <Text>
+            Метки черного цвета означают что данный населенный пункт ликвидирован, и неизвестно проживает ли в нем кто
+            нибудь. Без надобности не удаляйте!
           </Text>
           <br />
           <br />
@@ -263,6 +305,8 @@ class App extends React.Component {
           ? 'yellow'
           : newMarkType === 'green'
           ? 'green'
+          : newMarkType === 'violet'
+          ? 'violet'
           : 'blue'
 
       const colorMarkType = 'islands#' + colorMark + 'CircleDotIcon'
@@ -352,8 +396,12 @@ class App extends React.Component {
         this.openNotificationYellowMark()
       } else if (options && options.preset === 'islands#greenCircleDotIcon') {
         this.openNotificationGreenMark()
+      } else if (options && options.preset === 'islands#violetCircleDotIcon') {
+        this.openNotificationvioletMark()
       } else if (options && options.preset === 'islands#blackCircleDotIcon') {
         this.openNotificationblackMark()
+      } else {
+        this.fetchContent()
       }
     }
   }
@@ -410,6 +458,7 @@ class App extends React.Component {
               creatingYellow: false,
               creatingGreen: false,
               creatingblack: false,
+              creatingviolet: false,
               saving: false,
               content: {
                 content_html: '',
@@ -476,6 +525,10 @@ class App extends React.Component {
     })
   }
 
+  tabOnClick(tabKey) {
+    this.fetchContent()
+  }
+
   async fetchContent() {
     try {
       this.setState({
@@ -509,17 +562,6 @@ class App extends React.Component {
       this.setState({
         searchData: [],
       })
-    }
-  }
-
-  tabOnClick(tabKey) {
-    this.setState({
-      isTabPhonebook: tabKey === 'phonebook',
-    })
-    if (tabKey === 'phonebook') {
-      if (this.state.selectedMark) {
-        this.fetchContent()
-      }
     }
   }
 
@@ -602,18 +644,29 @@ class App extends React.Component {
         >
           Отметить как занятый
         </Menu.Item>
-
+        <Menu.Item
+          key="3"
+          onClick={() => this.setState({ creating: true, newMark: { ...this.state.newMark, type: 'violet' } })}
+        >
+          Добавить телеф. код
+        </Menu.Item>
         <Menu.Item
           key="4"
           onClick={() => this.setState({ creating: true, newMark: { ...this.state.newMark, type: 'black' } })}
         >
-          Добавить телеф. код
+          Ликвидированный
         </Menu.Item>
         <Menu.Divider />
         <Menu.Item onClick={() => this.setState({ onpenModalguide: true })} key="5">
           Нет справочника
         </Menu.Item>
-        <Menu.Item onClick={() => this.setState({ onpenModalhelp: true })} key="6">
+        <Menu.Item onClick={() => this.setState({ onpenModalhelpProject: true })} key="6">
+          Поддержать проект
+        </Menu.Item>
+        <Menu.Item onClick={() => this.setState({ onpenModalhelpUser: true })} key="7">
+          Для разработчиков
+        </Menu.Item>
+        <Menu.Item onClick={() => this.setState({ onpenModalhelp: true })} key="8">
           Инструкция
         </Menu.Item>
       </Menu>
@@ -621,28 +674,32 @@ class App extends React.Component {
 
     const menu1 = (
       <Menu>
-        <Menu.Item key="7">
-          <input type="checkbox" />
-          Показать карту актуальных справочников
-        </Menu.Item>
-        <Menu.Item key="8">
-          <input type="checkbox" />
-          Показать нас. пункты где нужна помошь
-        </Menu.Item>
         <Menu.Item key="9">
-          <input type="checkbox" />
-          Показать нас. пункты где пересекаются усилия
+          <input type="checkbox" Скрыть актуальные справочники />
         </Menu.Item>
         <Menu.Item key="10">
           <input type="checkbox" />
-          Показать нас. пункты находящиеся в обработке
+          Скрыть нас. пункты где нужна помошь
         </Menu.Item>
         <Menu.Item key="11">
           <input type="checkbox" />
-          Показать правила набора телефонных кодов
+          Скрыть нас. пункты где пересекаются усилия
+        </Menu.Item>
+        <Menu.Item key="12">
+          <input type="checkbox" />
+          Скрыть нас. пункты находящиеся в обработке
+        </Menu.Item>
+        <Menu.Item key="13">
+          <input type="checkbox" />
+          Скрыть правила набора телефонных кодов
+        </Menu.Item>
+        <Menu.Item key="14">
+          <input type="checkbox" />
+          Скрыть ликвидированные нас. пункты
         </Menu.Item>
       </Menu>
     )
+
     return (
       <div
         className="App"
@@ -669,9 +726,9 @@ class App extends React.Component {
         </Modal>
 
         <Modal
-          title="Инструкция по использованию"
+          title="Сайт предназначен для обмена информацией, где каждый может внести свой вклад"
           width="90%"
-          height="120vh"
+          height="150vh"
           style={{
             marginBottom: 60,
           }}
@@ -690,8 +747,14 @@ class App extends React.Component {
             <br></br> Телефонный код 871636<br></br> с 9-41-00 до 9-41-99<br></br> с 9-42-00 до 9-42-99<br></br> с
             9-43-00 до 9-43-99<br></br> с 9-44-00 до 9-44-99<br></br> с 9-45-00 до 9-45-99
             <br></br> с 9-46-00 до 9-46-99<br></br> с 9-47-00 до 9-47-99<br></br>
-            для перевода курсора на новую строку удерживайте клавишу SHIFT и затем ENTER(ввод) это позволит избежать
-            разрыва между строками<br></br>
+            для перевода курсора на новую строку удерживайте клавишу SHIFT и затем ENTER (ввод) это позволит избежать
+            разрыва между строками<br></br>При добавлении справочника в виде Exel таблицы (это стандарт для данного
+            сайта) при ее создании используйте шрифт Arial размер 10<br></br> При этом колонку номер позиции выделяйте
+            курсивом а колонку номер телефона полужирным шрифтом<br></br> Над колонкой номер позиции необходимо
+            поставить id а над колонкой номер телефона необходимо поставить tel иначе таблица не считается<br></br>Если
+            у вас есть бумажный справочник, и вы можете им поделится, позаботьтесь о том чтобы перевести его в Exel
+            <br></br>Оставив только номера позиции и номера телефонов, не выставля адреса и ФИО так как это нарушает
+            закон о защите персональных данных.<br></br>
             <br></br>ПРИ УСТАНОВКЕ КРАСНОЙ ЗЕЛЕНОЙ И ЖЕЛТОЙ МЕТКИ ВНАЧАЛЕ ЗАПОЛНИТЕ ПОЛЕ НАЗВАНИЕ ПОСЕЛКА ВО ВТОРОМ ПОЛЕ
             УКАЖИТЕ КТО ЕЕ ПОСТАВИЛ НАПРИМЕР:<br></br>
             Жесказган, Русское<br></br>
@@ -704,7 +767,8 @@ class App extends React.Component {
             Зеленая: в этом населенном пункте требуется помошь в поиске телефонных номеров<br></br>
             Желтая: в этом населенном пункте пересекаются усилия разных собраний<br></br>
             Красная: этот населенный пункт в данный момент обрабатывается<br></br>Описание опций меню:<br></br>
-            Черная: правило набора телефонного номера в данном населенном пункте<br></br>
+            Фиолетовая: правило набора телефонного номера в данном населенном пункте<br></br>Черная: ликвидированный
+            населенный пункт<br></br>
             {/* ДОБАВИТЬ СПРАВОЧНИК:<br></br>
               <i>
                 Этот пункт предназначен для добавления нового справочника на карту, после нажатия на Добавить справочник
@@ -743,22 +807,88 @@ class App extends React.Component {
           </Text>
         </Modal>
         <Modal
+          title="Поддержка проекта, по желанию"
+          width="30%"
+          height="120vh"
+          style={{
+            marginBottom: 60,
+          }}
+          visible={this.state.onpenModalhelpProject}
+          onOk={() => this.setState({ onpenModalhelpProject: false })}
+          okText="OK"
+          cancelText="Закрыть"
+          onCancel={() => this.setState({ onpenModalhelpProject: false })}
+        >
+          <Text>
+            Данный ресурс размешен на Российском хостинге https://beget.com/ru.<br></br>Для поддержания сайта в рабочем
+            состоянии требуется наличие положительного баланса на акаунте p70578v9<br></br> (Стоимость аренды 300р или
+            1686 тг в месяц) Логин и пароль для входа: p70578v9, jQqtxYe7<br></br>
+            Оплату можно произвести банковской картой, в которой разблокированы интернет покупки <br></br>
+          </Text>
+        </Modal>
+        <Modal
+          title="Информация для разработчиков"
+          width="70%"
+          height="120vh"
+          style={{
+            marginBottom: 60,
+          }}
+          visible={this.state.onpenModalhelpUser}
+          onOk={() => this.setState({ onpenModalhelpUser: false })}
+          okText="OK"
+          cancelText="Закрыть"
+          onCancel={() => this.setState({ onpenModalhelpUser: false })}
+        >
+          <Text>
+            Исходный код сайта находится по адресу: https://github.com/Faridjan/<br></br>Пример редактирования
+            клиентской части кода на Windows 7<br></br>1 Скачиваем и устанавливаем среду разработки Visual Studio Code
+            <br></br> 2 Скачиваем с https://github.com/Faridjan/telephones_front ZIP архив со всеми необходимыми
+            компонентами
+            <br></br> 3 Распаковываем этот архив например в папку site находящуюся на диске D:<br></br>4 Удаляем среди
+            распакованых файлов файл package-lock (это важно)<br></br>5 В терминале (cmd) набираем команду{' '}
+            <b>cd D:/site</b> затем <b>D:</b> появится <b>D:/site</b> набираем <b>npm i</b> и ждем завершения
+            <br></br>6 набираем <b>npm start</b> в браузере откроется страница localhost:3000<br></br>Теперь все
+            изменения кода сделанные в Visual Studio Code будут видны в браузере<br></br>
+            <br></br>Заливка исправленного кода на хостинг<br></br>1 Останавливаем работу терминала (cmd) удерживая ctrl
+            и нажимая клавишу C<br></br>2 снова удаляем из папки site файл package-lock (это важно) и в терминале (cmd)
+            набираем команду <b>npm run build</b> ждем завершения, при ошибке повторяем команду<br></br>3 в папке site
+            открываем папку build и все что там находится запаковываем в ZIP архив<br></br>4 Заходим на
+            https://beget.com/ru Логин и пароль для входа: p70578v9, jQqtxYe7<br></br>5 Переходим в Файловый менеджер,
+            открываем папку p70578v9 затем открываем public_html и удаляем все содержимое (удерживая Shifr нажимаем
+            левой копкой мыши на самом вернем и затем правой кнопкой мыши на самом нижнем, выбираем удалить)<br></br>6
+            Сверху нажимаем на загрузить файлы, в открывщемся окне нажимаем на Browser и выбираем наш ZIP архив и
+            нажимаем загрузить
+            <br></br>7 После загрузки нажимаем на загруженый архив и выбираем распаковать. Все, сайт обновлен<br></br>
+            Выходим из beget.com/ru
+            <br></br>
+          </Text>
+        </Modal>
+        <Modal
           title="То что хотелось бы сделать"
           width="90%"
-          visible={this.state.onpenModalweb}
-          onOk={() => this.setState({ creatingweb: true, onpenModalweb: false })}
+          height="120vh"
+          style={{
+            marginBottom: 60,
+          }}
+          visible={this.state.onpenModalprocces}
+          onOk={() => this.setState({ onpenModalprocces: false })}
           okText="OK"
-          onCancel={() => this.setState({ onpenModalweb: false })}
+          onCancel={() => this.setState({ onpenModalprocces: false })}
           cancelText="Отмена"
         >
           <Text>
-            САМОЕ ВАЖНОЕ
-            <br></br> 1 Добавить меню фильтра меток. Ссылка на фильтрацию меток
-            https://yandex.ru/dev/maps/jsbox/2.1/object_manager_filter <br></br> 2 Заменить карту на Google или 2 GIS.
-            <br></br>3 при установке любой метки при выборе места на карте привязать к указателю мыши ВЫБРАТЬ ПОЗИЦИЮ
-            <br></br>3 Перенести на платный хостинг установить пароль.<br></br>
+            САМОЕ ВАЖНОЕ <br></br>1 Сделать аутентификацию вход на сайт по уникальному номеру (номер собрания) и общему
+            паролю, затем при установке любой метки уникальный номер автоматически вставляется в поле заполнения формы
+            это позволит в дальнейшем производить фильтрацию оставляя видимыми только те метки которые поставлены
+            конкретным участником
+            <br></br> 2 Добавить меню фильтра меток. Ссылка на фильтрацию меток
+            https://yandex.ru/dev/maps/jsbox/2.1/object_manager_filter также html в чате<br></br> 3 Заменить карту на
+            Google или 2 GIS.
+            <br></br>4 при установке любой метки при выборе места на карте привязать к указателю мыши ВЫБРАТЬ ПОЗИЦИЮ
+            <br></br>5 Класная опция в чате по наведению на карту показывает название страны области и района тоже
+            хотелось бы добавить<br></br>
             <br></br>ВТОРОСТЕПЕННОЕ<br></br> 1 при наведении на красную желтую и зеленую метку показывать не только ее
-            название но и кто ее установил
+            название но и уникальный номер (это позволит сразу видеть кто ее установил не нажимая на нее)
             <br></br> 2 Сделать номера более читаемыми Заменить 31275 на 3-12-75<br></br> 3 В руководстве исправить
             таблицу (непрозвоненые сотни окрасились в серый цвет сделать прозрачными) и к кнопке скачать заготовку
             таблицы подвязать скачивание пустой заготовки
@@ -766,15 +896,16 @@ class App extends React.Component {
             <br></br>5 в цветных метках при переходе к окну добавить во второе поле Введите описание и не сохранять
             метку пока описание не заполнено с выводом предупреждения. и под полем информационная надпись отдельно для
             каждого цвета<br></br>6 Закрывать инф окно при нажатии на карту<br></br>7 добавить второй поиск по карте
-            <br></br>
+            <br></br>8 При скачивание справочника заменить Demo.xlsc На название поселка.xlsc<br></br>9 класная опция в
+            чате показывает 2 местоположение 1 вычисленное по ip и 2 вычисленое средствами браузера чтобы участники
+            понимали насколько легко вычислить их местоположение
             <br></br>ОШИБКИ<br></br> 1 При нажатии в поиске на значок лупы при пустом поле выходит ошибка, происходит
             зависание страницы(даже не при пустом кажется тоже выйдет ошибка) и поле поиска не очищается после выбора
             справочника (если с большой буквы поиск перестает работать) частые ошибки при нажатии крестика в поиске
             происходит зависание страницы<br></br>2 Название метки Златополье не отправляется, златополье с маленькой
-            буквы отправляется, Федоровка не отправляется Федоровка.(с точкой отправляется)<br></br> 3 При переходе на
+            буквы отправляется, Федоровка не отправляется Федоровка. (с точкой) отправляется<br></br> 3 При переходе на
             пустой справочник кнопки ОК и ОТМЕНА двигаются вместе со страницей, зафиксировать кнопки.
-            <br></br>4 В инф окнах немного отодвинуть кнопки Редактировать и Справочник найден от кнопки Удалить
-            <br></br>Возле тараза 2 метки и одна посередине карты не удаляется при нажатии происходит падение сайта
+            <br></br>4 В инф окне зеленой метки немного раздвинуть кнопки Удалить и Справочник найден
           </Text>
         </Modal>
         <YMaps query={{ lang: 'ru_RU' }}>
@@ -813,6 +944,7 @@ class App extends React.Component {
                 }}
               />
             ))}
+            <SearchControl />
           </Map>
         </YMaps>
         <div
@@ -894,34 +1026,28 @@ class App extends React.Component {
             />
           ) : null}
         </div>
-        {newMark.coordinates ? (
-          <div className="createPanel" style={{ width: isTabPhonebook ? '100%' : '30%' }}>
-            <div>
-              {isTabPhonebook ? (
-                <LeftSquareOutlined
-                  onClick={() => this.setState({ isTabPhonebook: false })}
-                  style={{
-                    position: 'absolute',
-                    fontSize: 30,
-                    color: 'rgb(24, 144, 255)',
-                    right: 20,
-                    top: 20,
-                    cursor: 'pointer',
-                  }}
-                />
-              ) : null}
 
+        {/* Панель установки синей точки */}
+        {newMark.coordinates ? (
+          <div className="createPanel" style={{ width: '30%' }}>
+            <div>
               <Title level={3}>{this.state.newMark.type === 'base' ? 'Добавление справочника' : 'Описание'}</Title>
 
-              <div style={{ display: isTabPhonebook ? 'none' : 'block' }}>
+              <div style={{ display: 'block' }}>
                 <Input
-                  placeholder="Введите название поселка"
+                  placeholder="Название населенного пункта"
                   ref={this.inputNameRef}
                   allowClear
                   onChange={this.onChangeTitle.bind(this)}
                 />
                 <br />
                 <br />
+                {/* <Input
+                  placeholder="Номер собрания (необходим для фильтра)"
+                  ref={this.inputNameRef}
+                  allowClear
+                  onChange={this.onChangeTitle.bind(this)}
+                /> */}
                 <CKEditor
                   editor={ClassicEditor}
                   config={{ toolbar: [] }}
@@ -935,49 +1061,16 @@ class App extends React.Component {
 
               {newMark.type === 'base' ? (
                 <Tabs onTabClick={this.tabOnClick.bind(this)}>
-                  <TabPane tab="Метка" key="markOptions">
-                    Настройки метки
-                  </TabPane>
-                  <TabPane tab="Справочник" key="phonebook" centered>
-                    <Tabs
-                      centered
-                      tabBarStyle={{
-                        background: '#fefefe',
-                        padding: '0 15px',
-                        display: 'inline-block',
-                        borderRadius: 5,
+                  <TabPane>
+                    <input
+                      type="file"
+                      onChange={(e) => {
+                        const file = e.target.files[0]
+                        this.readExcel(file)
                       }}
-                    >
-                      <TabPane key="menuTable" tab="Таблица">
-                        <input
-                          type="file"
-                          onChange={(e) => {
-                            const file = e.target.files[0]
-                            this.readExcel(file)
-                          }}
-                        />
-                        <br />
-                        <br />
-                        <Table
-                          style={{
-                            marginBottom: 80,
-                          }}
-                          columns={COULUMNS}
-                          rowKey="__rowNum__"
-                          dataSource={content.content_json}
-                          locale={{
-                            emptyText: (
-                              <Empty description="Справочник отсутствуeт" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                            ),
-                          }}
-                          rowClassName={() => 'editable-row'}
-                          pagination={false}
-                        />
-                      </TabPane>
-                      <TabPane key="menuIMG" tab="Изображение">
-                        Фотография
-                      </TabPane>
-                    </Tabs>
+                    />
+                    <br />
+                    <br />
                   </TabPane>
                 </Tabs>
               ) : null}
@@ -1011,117 +1104,74 @@ class App extends React.Component {
             </div>
           </div>
         ) : null}
-        {/* Редактирование Точки */}
-        {selectedMark && selectedMark.options.preset === 'islands#blueCircleDotIcon' ? (
-          <div className="createPanel" style={{ width: isTabPhonebook ? '100%' : '30%' }}>
-            {isTabPhonebook ? (
-              <LeftSquareOutlined
-                onClick={() => this.setState({ isTabPhonebook: false })}
-                style={{
-                  position: 'absolute',
-                  fontSize: 30,
-                  color: 'rgb(24, 144, 255)',
-                  right: 20,
-                  top: 20,
-                  cursor: 'pointer',
-                }}
-              />
-            ) : null}
 
+        {/* Действие по нажатию на справочник */}
+        {selectedMark && selectedMark.options.preset === 'islands#blueCircleDotIcon' ? (
+          <div className="createPanel" style={{ width: '30%' }}>
             <div>
-              <Title level={3} style={{ textAlign: 'center' }} editable={edit}>
+              <Title level={3} style={{ textAlign: 'center' }}>
                 {selectedMark.name}
               </Title>
+
               <div dangerouslySetInnerHTML={createMarkup()} />
               <div>
-                <Tabs onTabClick={this.tabOnClick.bind(this)}>
-                  <TabPane tab="Метка" key="markOptions">
-                    Настройки метки
-                  </TabPane>
-                  <TabPane tab="Справочник" key="phonebook" centered>
-                    <Tabs
-                      centered
-                      tabBarStyle={{
-                        background: '#fefefe',
-                        padding: '0 15px',
-                        display: 'inline-block',
-                        borderRadius: 5,
+                {this.state.loading ? (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  >
+                    <Spin />
+                  </div>
+                ) : (
+                  <>
+                    {this.state.content.content_json ? (
+                      <Button
+                        style={{
+                          margin: '30px 0 10px',
+                        }}
+                        onClick={this.exportJS.bind(this)}
+                      >
+                        Скачать в EXCEL
+                      </Button>
+                    ) : null}
+                    <Table
+                      columns={COULUMNS}
+                      dataSource={content.content_json}
+                      locale={{
+                        emptyText: <Empty description="Справочник отсутствуeт" image={Empty.PRESENTED_IMAGE_SIMPLE} />,
                       }}
-                    >
-                      <TabPane key="menuTable" tab="Таблица">
-                        {this.state.content.content_json ? (
-                          <>
-                            <Button onClick={this.exportJS.bind(this)}>Скачать в EXCEL</Button>
-                            <br />
-                            <br />
-                          </>
-                        ) : null}
-                        <div
-                          style={{
-                            display: this.state.loading ? 'flex' : 'none',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Spin />
-                        </div>
-                        <Table
-                          columns={COULUMNS}
-                          dataSource={content.content_json}
-                          locale={{
-                            emptyText: (
-                              <Empty description="Справочник отсутствуeт" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                            ),
-                          }}
-                          rowClassName={() => 'editable-row'}
-                          pagination={false}
-                          bordered
-                        />
-                      </TabPane>
-                      <TabPane key="menuIMG" tab="Изображение">
-                        Изображение
-                      </TabPane>
-                      <TabPane key="menuFile" tab="Файл">
-                        Файл
-                      </TabPane>
-                    </Tabs>
-                  </TabPane>
-                </Tabs>
+                      rowClassName={() => 'editable-row'}
+                      pagination={false}
+                    />
+                  </>
+                )}
               </div>
             </div>
 
             <div
               style={{
                 display: 'flex',
+                marginTop: 30,
                 justifyContent: 'flex-end',
               }}
             >
-              {!edit ? (
-                <Button onClick={() => this.setState({ edit: true })}>Редактировать</Button>
-              ) : (
-                <Space size={20}>
-                  <Button type="dashed" onClick={() => this.setState({ edit: false })}>
-                    Отмена
-                  </Button>
-                  <div>
-                    <Button type="primary" onClick={() => this.setState({ edit: false })}>
-                      Сохранить
-                    </Button>
-                    <Popconfirm
-                      placement="topRight"
-                      title="Подтверждаете удаление?"
-                      okText="Да"
-                      onConfirm={this.removeMark.bind(this)}
-                      cancelText="Нет"
-                    >
-                      <Button danger>Удалить</Button>
-                    </Popconfirm>
-                  </div>
-                </Space>
-              )}
+              <Popconfirm
+                placement="topRight"
+                title="Вы удаляете справочник!"
+                okText="Да"
+                onConfirm={this.removeMark.bind(this)}
+                cancelText="Нет"
+              >
+                <Button danger>Удалить</Button>
+              </Popconfirm>
             </div>
           </div>
         ) : null}
+
         <Button
           type="default"
           style={{
@@ -1150,7 +1200,7 @@ class App extends React.Component {
           }}
           shape="round"
           disabled={creating}
-          onClick={() => this.setState({ onpenModalweb: true })}
+          onClick={() => this.setState({ onpenModalprocces: true })}
         >
           Доработать
         </Button>
